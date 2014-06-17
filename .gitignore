@@ -2,9 +2,10 @@ logs
 project/project
 project/target
 target
+.target
 tmp
 .history
-dist
+/dist
 /.idea
 /*.iml
 /out
@@ -13,3 +14,13 @@ dist
 /.project
 /RUNNING_PID
 /.settings
+bin
+/*.class
+/tmpFiles
+/ui/gen
+/data/uploads
+/data/samples
+/test/samples
+temp
+*.png
+!public/*
