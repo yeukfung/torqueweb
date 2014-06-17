@@ -1,0 +1,105 @@
+<======
+profileVe => 85.0
+profileFuelCost => 0.18477408587932587
+profileName => Elysion
+profileFuelType => 0
+profileWeight => 1800.0
+v => 7
+id => cca6e349887eab3ace1aed9d0cb877b7
+session => 1402931817694
+time => 1402931835080
+eml => yeukfung@gmail.com
+-->
+<======
+defaultUnit04 =>  
+defaultUnitff1258 => g/km
+defaultUnitff1202 => psi
+defaultUnitff1005 => ￂﾰ
+defaultUnit0e => ￂﾰ
+defaultUnit0b => kPa
+defaultUnit11 =>  
+defaultUnit0a => kPa
+defaultUnit05 => ￂﾰC
+defaultUnit0f => ￂﾰC
+defaultUnitff1006 => ￂﾰ
+defaultUnitff1001 => km/h
+defaultUnitff1273 => kW
+v => 7
+defaultUnitff1249 => :1
+defaultUnitff1238 => V
+defaultUnitff1203 => kpl
+id => cca6e349887eab3ace1aed9d0cb877b7
+defaultUnitff125d => l/hr
+session => 1402931817694
+defaultUnit10 => g/s
+time => 1402931835088
+defaultUnit0d => km/h
+eml => yeukfung@gmail.com
+defaultUnit0c => rpm
+defaultUnit2f =>  
+defaultUnitff1257 => g/km
+defaultUnitff1007 => 
+-->
+<======
+kff1005 => 114.09834647
+v => 7
+kff1001 => 0.0
+kff1006 => 22.37015991
+id => cca6e349887eab3ace1aed9d0cb877b7
+session => 1402931817694
+kff1007 => 0.0
+time => 1402931835093
+eml => yeukfung@gmail.com
+-->
+<======
+userUnit10 => g/s
+userUnitff1007 => 
+userUnitff1006 => ￂﾰ
+userUnitff125d => gal/hr
+userUnit0a => psi
+userUnitff1203 => kpl
+userUnit0c => rpm
+userUnitff1005 => ￂﾰ
+userUnitff1258 => g/km
+userUnitff1273 => kW
+userUnit04 =>  
+v => 7
+id => cca6e349887eab3ace1aed9d0cb877b7
+userUnitff1257 => g/km
+userUnitff1001 => km/h
+userUnit0d => km/h
+userUnitff1202 => psi
+session => 1402931817694
+userUnit05 => ￂﾰC
+userUnitff1238 => V
+userUnit11 =>  
+userUnitff1249 => :1
+time => 1402931835093
+userUnit2f =>  
+eml => yeukfung@gmail.com
+userUnit0e => ￂﾰ
+userUnit0f => ￂﾰC
+userUnit0b => psi
+-->
+<======
+kff1005 => 114.09834617
+v => 7
+kff1001 => 0.0
+kff1006 => 22.37015986
+id => cca6e349887eab3ace1aed9d0cb877b7
+session => 1402931817694
+kff1007 => 0.0
+time => 1402931837076
+eml => yeukfung@gmail.com
+-->
+<======
+kff1005 => 114.09834704
+v => 7
+kff1001 => 0.0
+kff1006 => 22.37016041
+id => cca6e349887eab3ace1aed9d0cb877b7
+session => 1402931817694
+kff1007 => 0.0
+time => 1402931838076
+eml => yeukfung@gmail.com
+-->

@@ -1,0 +1,14 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET    /               controllers.Application.index
+
+GET    /torque         controllers.Torque.upload
+POST   /torque         controllers.Torque.upload
+
+GET    /torque/pruneData/:apiKey         controllers.Torque.pruneData(apiKey:String)
+
+# Map static resources from the /public folder to the /assets URL path
+GET    /assets/*file   controllers.Assets.at(path="/public", file)
