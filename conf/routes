@@ -4,7 +4,6 @@
 
 # Home page
 GET    /                           controllers.Application.index
-GET    /home                       controllers.Application.home
 
 GET    /login                      controllers.Application.login
 POST   /login                      controllers.Application.checkLogin
@@ -13,6 +12,9 @@ GET    /logout                      controllers.Application.logout
 
 GET    /torque                     controllers.Torque.upload
 POST   /torque                     controllers.Torque.upload
+
+GET		/api/sessions				controllers.Application.ajaxSessionsGet
+GET		/api/sessiondata/:sessionId controllers.Application.ajaxSessionDataGet(sessionId)
 
 GET    /torque/pruneData/:apiKey   controllers.Torque.pruneData(apiKey:String)
 

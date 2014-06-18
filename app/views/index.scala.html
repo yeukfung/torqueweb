@@ -1,7 +1,60 @@
 @(message: String)
 
-@main("Welcome to Play") {
+@main("Home") {
+	<div ng-app="app">
+	<div ng-controller="MainCtrl">
+	
+	<div class="col-md-2">
+	
+	<h5>1. select the session</h5>
+	  <ul class="list-unstyled sessions m-t-md">
+	  <li  ng-repeat="sess in sessions" ng-class="{active: sess.session == selectedSession}" ng-click="selectSession(sess.session)"> {{sess.time | date:'yyyy/MM/dd HH:mm:ss'}}</li>
+	  </ul>
+	  
+	  <hr/>
+	  
+	</div>
+<div class="col-md-7">
+	<div class="m-t-md">
+  start :  <select ng-model="selectedStartTime" ng-options="timeslot as (timeslot | date:'yyyy/MM/dd HH:mm:ss' ) for timeslot in currentData.timeslots"></select>
+  &nbsp; &nbsp; end : <select ng-model="selectedEndTime" ng-options="timeslot as (timeslot | date:'yyyy/MM/dd HH:mm:ss' ) for timeslot in currentData.timeslots"></select>
+  &nbsp; &nbsp; <a href="#" ng-click="applyStartEndTime()">apply</a>
+	</div>
+	
+	<hr/>
+	
+	<map zoom="11" center="Hong Kong" style="display:block; height:600px;"></map>  
+</dl>
 
-    @play20.welcome(message)
+
+</div>	
+	<div class="col-md-3">
+
+	  <dl class="dl-horizontal m-t-md ">
+  <dt>engine load avg</dt>
+  <dd>{{currentData.engineLoadAvg | number:2}} %</dd>
+  <dt>engine RPM avg</dt>
+  <dd>{{currentData.engineRPMAvg | number:0 }} rpm</dd>
+  <dt>kpl avg</dt>
+  <dd>{{currentData.kplAvg | number:2}} km/l</dd>
+  
+  <dt>speed avg</dt>
+  <dd>{{currentData.speedAvg | number:1}} km/h</dd>
+  
+  <dt>speed max</dt>
+  <dd>{{currentData.speedMax}} km/h</dd>
+
+</dl>
+		
+		
+	</div>	
+	
+	</div>
+	</div>
+	
+	<div class="col-md-12 text-center m-t-md">
+	<hr/>
+	<a class="m-t-md" href="@routes.Application.logout">change user?</a> </div>
+	<script src="@routes.Assets.at("javascripts/app.js")" type="text/javascript"></script>
 
 }
