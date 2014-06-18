@@ -5,11 +5,20 @@
 <html>
     <head>
         <title>@title</title>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.at("bower_components/bootstrap/dist/css/bootstrap.css")">
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-        <script src="@routes.Assets.at("javascripts/jquery-1.9.0.min.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("bower_components/jquery/dist/jquery.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("bower_components/bootstrap/dist/js/bootstrap.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("bower_components/angular/angular.js")" type="text/javascript"></script>
     </head>
     <body>
-        @content
+    	<div class="header">
+    	    <span class="title">Torque Log Analystic Tool</span>
+    	    <div class="clearfix"></div>
+    	</div>
+    	<div class="container">
+        	@content
+        </div>
     </body>
 </html>

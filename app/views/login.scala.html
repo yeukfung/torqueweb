@@ -1,0 +1,26 @@
+@()(implicit flash: Flash)
+
+@main("Login") {
+
+
+<div class="col-md-4 col-md-offset-4 text-center">
+@flash.get("msg").map { msg =>
+  <div class="has-error">
+  <br/>
+  	<label class="control-label">@msg</label>
+  </div>
+}
+  <h2>&nbsp;</h2>
+  <h5>Please enter your email to enter</h5>  
+  <form action="@routes.Application.checkLogin()" method="post">
+    <div class="form-group">
+    <input type="email" name="email" class="form-control text-center">
+    </div>
+    <div class="form-group">
+      <input type="submit" value="Enter">
+    </div>
+  </form>
+
+</div>
+
+}
