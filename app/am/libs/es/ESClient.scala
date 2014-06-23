@@ -8,7 +8,7 @@ import play.api.libs.json.Json
 
 class ESClient(esURL: String) {
 
-  def baseUrl(idx: String, t: String, action: String) = s"$esURL/$idx/$t/$action".replaceAll("///", "/").replaceAll("//", "/")
+  def baseUrl(idx: String, t: String, action: String) = esURL + s"/$idx/$t/$action".replaceAll("///", "/").replaceAll("//", "/")
 
   def bulk(index: Option[String] = None, t: Option[String] = None, data: JsObject): Future[Response] = {
     val url = baseUrl(index.getOrElse(""), t.getOrElse(""), "_bulk")
@@ -45,6 +45,7 @@ class ESClient(esURL: String) {
 
   def index(index: String, `type`: String, id: String, data: JsObject, refresh: Boolean = false): Future[Response] = {
     val url = baseUrl(index, `type`, id)
+    if(id == "_mapping") println(s"url = $url with data: $data")
     WS.url(url).put(data)
   }
 

@@ -8,6 +8,12 @@ import play.api.libs.json.JsValue
 import play.modules.reactivemongo.MongoController
 import play.modules.reactivemongo.json.collection.JSONCollection
 import scala.concurrent.ExecutionContext.Implicits._
+import am.libs.es.ESClient
+import play.api.libs.json._
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
+import java.util.Date
+import java.text.SimpleDateFormat
 
 object Torque extends Controller with MongoController {
 
@@ -22,18 +28,8 @@ object Torque extends Controller with MongoController {
     }
   }
 
-  def pruneData(apiKey: String) = Action.async { request =>
-
-    if (apiKey == "Dkd9ea29ud") {
-      for {
-        result1 <- tryPerform(collHeaders.drop)
-        result2 <- tryPerform(collSessionLogs.drop)
-      } yield {
-        Ok
-      }
-    } else Future.successful(Forbidden)
-
-  }
+  val pruneId = (__ \ "_id").json.prune
+  //val updateKdToNumber = (__ \ "kd").json.update(__.read[JsObject].map { s => println(s); s })
 
   val pidMap = Map(
     "04" -> ("Engine Load", "%"),
@@ -61,9 +57,112 @@ object Torque extends Controller with MongoController {
 
     "ff124d" -> ("Air Fuel Ratio(Commanded)", "1"))
 
-  import play.api.libs.json._ // JSON library
-  import play.api.libs.json.Reads._ // Custom validation helpers
-  import play.api.libs.functional.syntax._ // Combinator syntax
+  def submitToElasticSearch = Action.async {
+    //    val esHost = "http://192.168.8.139:9200";
+    val esHost = "http://localhost:9200";
+
+    val esClient = new ESClient(esHost)
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+
+    val jsonSetting = Json.parse("""
+{
+    "torquelogs" : {
+        "properties" : {
+          "sessionName" : {
+            "type" : "string", "index" : "not_analyzed"
+          }
+        }
+    }
+}
+        
+        """).as[JsObject]
+
+    // to double read
+    def dr(fld: String) = (__ \ fld).readOpt[String].map(s => JsNumber(s.getOrElse("0.0").toDouble))
+
+    val logToOBDDataJs = (
+      (__ \ 'sessionName).json.copyFrom(((__ \ 'time).read[String]).map(s => JsString("trip - " + dateFormat.format(new Date(s.toLong))))) and
+      (__ \ 'speed).json.copyFrom(dr("kd")) and
+      (__ \ 'engineLoad).json.copyFrom(dr("k4")) and
+      (__ \ 'engineRPM).json.copyFrom(dr("kc")) and
+      (__ \ 'throttlePos).json.copyFrom(dr("k11")) and
+      (__ \ 'kpl).json.copyFrom(dr("kff1203")) and
+      (__ \ 'airFuelRatio).json.copyFrom(dr("kff1249")) and
+      (__ \ 'intakeAirTemp).json.copyFrom(dr("kf")) and
+      (__ \ 'intakeManifoldPressure).json.copyFrom(dr("kb")) and
+      (__ \ 'engineCoolantTemp).json.copyFrom(dr("k5")) and
+      (__ \ 'co2InGperKM).json.copyFrom(dr("kff1257")) and
+      (__ \ 'fuelFlowRate).json.copyFrom(dr("kff125d")) and
+      (__ \ 'fuelPressure).json.copyFrom(dr("ka")) and
+      (__ \ 'massAirFlowRate).json.copyFrom(dr("k10")) and
+      (__ \ 'timingAdvance).json.copyFrom(dr("ke")) and
+      (__ \ 'vacuum).json.copyFrom(dr("kff1202")) and
+      (__ \ 'voltage).json.copyFrom(dr("kff1238")) and
+      (__ \ 'barometer).json.copyFrom(dr("kff1270")) and
+      (__ \ 'torque).json.copyFrom(dr("kff1225")) and
+      (__ \ 'airFuelRatioCmd).json.copyFrom(dr("kff124d"))
+    ) reduce
+
+    val logToCoreData = (
+      (__ \ 'id).json.copyFrom((__ \ "_id" \ "$oid").json.pick[JsString]) and
+      (__ \ 'eml).json.copyFrom((__ \ 'eml).json.pick) and
+      (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))
+    ) reduce
+
+    val result = for {
+      deleteOk <- esClient.deleteIndex("obddata")
+      createOk <- esClient.createIndex("obddata", Some(jsonSetting))
+      mappingOk <- esClient.index("obddata", "torquelogs", "_mapping", jsonSetting)
+      data <- collSessionLogs.find(Json.obj()).cursor[JsObject].collect[List]()
+    } yield {
+    	println( "createOk = " + createOk.body)
+    	println( "mappingOk = " + mappingOk.body)
+      data.foreach { js =>
+        if (!(js \ "profileName").asOpt[JsValue].isDefined) {
+//          println("going to get js: " + js);
+
+          val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println(err); Json.obj() }, valid = { js => js })
+          val js2 = js.transform(logToCoreData).fold(invalid = { err => println(err); Json.obj() }, valid = { js => js })
+
+          val id = (js \ "_id" \ "$oid").as[String]
+
+          //          val new_kd = (js \ "kd").asOpt[String].map(s => JsNumber(s.toDouble)).getOrElse(JsNumber(0))
+          //
+          //          val sessionName = (js \ "session").asOpt[String].map { l => dateFormat.format(new Date(l.toLong)) } getOrElse ("")
+          //          val newTimestamp = (js \ "time").asOpt[String].map { l =>
+          //            val d = new Date(l.toLong)
+          //            dateFormat.format(d)
+          //          }.getOrElse("")
+
+          val geoPoint1 = (js \ "kff1005").asOpt[String].map(_.toDouble)
+          val geoPoint2 = (js \ "kff1006").asOpt[String].map(_.toDouble)
+
+          var newJs = js1 ++ js2
+
+          if (geoPoint1.isDefined && geoPoint2.isDefined)
+            newJs = newJs ++ Json.obj("geoPoint" -> Json.arr(geoPoint1, geoPoint2))
+
+          esClient.index("obddata", "torquelogs", id, newJs)
+        }
+      }
+      Ok("done")
+    }
+
+    result
+  }
+
+  def pruneData(apiKey: String) = Action.async { request =>
+
+    if (apiKey == "Dkd9ea29ud") {
+      for {
+        result1 <- tryPerform(collHeaders.drop)
+        result2 <- tryPerform(collSessionLogs.drop)
+      } yield {
+        Ok
+      }
+    } else Future.successful(Forbidden)
+
+  }
 
   val requiredField = (
     (__ \ 'v).json.pickBranch and

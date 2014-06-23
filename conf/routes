@@ -3,20 +3,21 @@
 # ~~~~
 
 # Home page
-GET    /                           controllers.Application.index
+GET    /                             controllers.Application.index
 
-GET    /login                      controllers.Application.login
-POST   /login                      controllers.Application.checkLogin
+GET    /login                        controllers.Application.login
+POST   /login                        controllers.Application.checkLogin
 
-GET    /logout                      controllers.Application.logout
+GET    /logout                       controllers.Application.logout
 
-GET    /torque                     controllers.Torque.upload
-POST   /torque                     controllers.Torque.upload
+GET    /torque                       controllers.Torque.upload
+POST   /torque                       controllers.Torque.upload
 
-GET		/api/sessions				controllers.Application.ajaxSessionsGet
-GET		/api/sessiondata/:sessionId controllers.Application.ajaxSessionDataGet(sessionId)
+GET    /api/sessions                 controllers.Application.ajaxSessionsGet
+GET    /api/sessiondata/:sessionId   controllers.Application.ajaxSessionDataGet(sessionId)
 
-GET    /torque/pruneData/:apiKey   controllers.Torque.pruneData(apiKey:String)
+GET    /torque/sendToES              controllers.Torque.submitToElasticSearch
+GET    /torque/pruneData/:apiKey     controllers.Torque.pruneData(apiKey:String)
 
 # Map static resources from the /public folder to the /assets URL path
-GET    /assets/*file               controllers.Assets.at(path="/public", file)
+GET    /assets/*file                 controllers.Assets.at(path="/public", file)
