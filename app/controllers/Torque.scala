@@ -14,6 +14,9 @@ import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 import java.util.Date
 import java.text.SimpleDateFormat
+import play.api.templates.Html
+import reactivemongo.bson.BSONDocument
+import play.api.Logger
 
 object Torque extends Controller with MongoController {
 
@@ -57,25 +60,27 @@ object Torque extends Controller with MongoController {
 
     "ff124d" -> ("Air Fuel Ratio(Commanded)", "1"))
 
+  val esHost = "http://localhost:9200";
+
+  val esClient = new ESClient(esHost)
+
+  val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+
+  val jsonSetting = Json.parse("""
+		  {
+		  "torquelogs" : {
+		  "properties" : {
+		  "sessionName" : {
+		  "type" : "string", "index" : "not_analyzed"
+		  }
+		  }
+		  }
+		  }
+		  
+		  """).as[JsObject]
+
   def submitToElasticSearch = Action.async {
     //    val esHost = "http://192.168.8.139:9200";
-    val esHost = "http://localhost:9200";
-
-    val esClient = new ESClient(esHost)
-    val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-
-    val jsonSetting = Json.parse("""
-{
-    "torquelogs" : {
-        "properties" : {
-          "sessionName" : {
-            "type" : "string", "index" : "not_analyzed"
-          }
-        }
-    }
-}
-        
-        """).as[JsObject]
 
     // to double read
     def dr(fld: String) = (__ \ fld).readOpt[String].map(s => JsNumber(s.getOrElse("0.0").toDouble))
@@ -100,39 +105,26 @@ object Torque extends Controller with MongoController {
       (__ \ 'voltage).json.copyFrom(dr("kff1238")) and
       (__ \ 'barometer).json.copyFrom(dr("kff1270")) and
       (__ \ 'torque).json.copyFrom(dr("kff1225")) and
-      (__ \ 'airFuelRatioCmd).json.copyFrom(dr("kff124d"))
-    ) reduce
+      (__ \ 'airFuelRatioCmd).json.copyFrom(dr("kff124d"))) reduce
 
     val logToCoreData = (
       (__ \ 'id).json.copyFrom((__ \ "_id" \ "$oid").json.pick[JsString]) and
       (__ \ 'eml).json.copyFrom((__ \ 'eml).json.pick) and
-      (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))
-    ) reduce
+      (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))) reduce
 
     val result = for {
-      deleteOk <- esClient.deleteIndex("obddata")
-      createOk <- esClient.createIndex("obddata", Some(jsonSetting))
-      mappingOk <- esClient.index("obddata", "torquelogs", "_mapping", jsonSetting)
-      data <- collSessionLogs.find(Json.obj()).cursor[JsObject].collect[List]()
+      data <- collSessionLogs.find(Json.obj("indexed" -> false)).cursor[JsObject].collect[List]()
     } yield {
-    	println( "createOk = " + createOk.body)
-    	println( "mappingOk = " + mappingOk.body)
+      Logger.info(s"<-- got ${data.size} to perform index")
+      
       data.foreach { js =>
         if (!(js \ "profileName").asOpt[JsValue].isDefined) {
-//          println("going to get js: " + js);
 
-          val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println(err); Json.obj() }, valid = { js => js })
-          val js2 = js.transform(logToCoreData).fold(invalid = { err => println(err); Json.obj() }, valid = { js => js })
+          val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
+          val js2 = js.transform(logToCoreData).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
 
+          
           val id = (js \ "_id" \ "$oid").as[String]
-
-          //          val new_kd = (js \ "kd").asOpt[String].map(s => JsNumber(s.toDouble)).getOrElse(JsNumber(0))
-          //
-          //          val sessionName = (js \ "session").asOpt[String].map { l => dateFormat.format(new Date(l.toLong)) } getOrElse ("")
-          //          val newTimestamp = (js \ "time").asOpt[String].map { l =>
-          //            val d = new Date(l.toLong)
-          //            dateFormat.format(d)
-          //          }.getOrElse("")
 
           val geoPoint1 = (js \ "kff1005").asOpt[String].map(_.toDouble)
           val geoPoint2 = (js \ "kff1006").asOpt[String].map(_.toDouble)
@@ -142,13 +134,16 @@ object Torque extends Controller with MongoController {
           if (geoPoint1.isDefined && geoPoint2.isDefined)
             newJs = newJs ++ Json.obj("geoPoint" -> Json.arr(geoPoint1, geoPoint2))
 
-            println("js to save: " + newJs)
           esClient.index("obddata", "torquelogs", id, newJs)
+          
+          val q = Json.obj("_id" -> Json.obj("$oid"-> id))
+          collSessionLogs.update(q, Json.obj("$set" -> Json.obj("indexed" -> true)))
         }
       }
+      
+      Logger.info(s"index action completed -->")
       Ok("done")
     }
-
     result
   }
 
@@ -187,18 +182,18 @@ object Torque extends Controller with MongoController {
       (qMap._1, qMap._2.head)
     }
 
-    val js = Json.toJson(flattenMap)
+    val js = Json.toJson(flattenMap).as[JsObject]
 
     js.validate(requiredField) match {
       case s: JsSuccess[JsObject] =>
         val data = js.transform(removeRequiredField).get
 
-        if (data.toString.contains("default") || data.toString.contains("user")) {
+        if (data.toString.contains("default") || data.toString.contains("user") || data.toString.contains("profile")) {
           // header item
 
           val cursor = collHeaders.find(s.get.transform(removeTime).get).cursor[JsObject]
           cursor.collect[List]().map { l =>
-            val fieldName = if (data.toString.contains("default")) "default" else "user"
+            val fieldName = if (data.toString.contains("default")) "default" else if (data.toString.contains("default")) "user" else "profile"
             val updateData = Json.obj(fieldName -> data)
 
             if (l.size > 0) {
@@ -215,7 +210,8 @@ object Torque extends Controller with MongoController {
         } else {
           if (data.toString.contains(":")) {
             // has data and
-            val result = collSessionLogs.insert(js)
+            
+            val result = collSessionLogs.insert(js ++ Json.obj("indexed" -> false))
             result map { le =>
               Ok("OK!")
             }
@@ -231,5 +227,27 @@ object Torque extends Controller with MongoController {
 
     //println("-->")
 
+  }
+
+  /** admin db **/
+  def resetAllLogAndIndex(apiKey: String) = Action.async {
+    if ("kdkfei12123dkei4p" == apiKey) {
+
+      val q = Json.obj()
+      // reset 
+      for {
+        deleteOk <- esClient.deleteIndex("obddata")
+        createOk <- esClient.createIndex("obddata", Some(jsonSetting))
+        mappingOk <- esClient.index("obddata", "torquelogs", "_mapping", jsonSetting)
+        cntLog <- collSessionLogs.find(q).cursor[JsObject].collect[List]()
+        updateLog <- collSessionLogs.update(q, Json.obj("$set" -> Json.obj("indexed" -> false)), multi = true)
+      } yield {
+        // mark all field to indexed = false
+        val r = s"delete: ${deleteOk.body} <br/>createOk: ${createOk.body} <br/>mappingOk: ${mappingOk.body} <br/>countLog: ${cntLog.size}<br/>updateLog: ${updateLog.stringify}"
+
+        Ok(Html("done with result: <br/><br/><br/>" + r))
+      }
+
+    } else Future.successful(Ok("?"))
   }
 }
