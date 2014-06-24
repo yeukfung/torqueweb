@@ -8,11 +8,33 @@ import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import scala.concurrent.ExecutionContext.Implicits._
+import play.api.libs.ws.WS
+import play.api.libs.json._
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
 
 object Application extends Controller with MongoController with ProfileService {
 
-  def index = Authenticated {
-    Ok(views.html.index("Your new application is ready."))
+  def index = Authenticated { request =>
+    Ok(views.html.index(request.username))
+  }
+
+  val esSvr = "http://localhost:9200/"
+  def esRedirect(urlpath: String) = Authenticated.async { implicit request =>
+    val url = esSvr + urlpath;
+    println(url);
+    val resp = request.method.toLowerCase() match {
+      case "post" => WS.url(url).post(request.body.asJson.getOrElse(Json.obj()))
+      case "put" => WS.url(url).put(request.body.asJson.getOrElse(Json.obj()))
+      case "delete" => WS.url(url).delete()
+      case _ => 
+//        if (request.path.contains("""dashboard"""))
+//        WS.url(url + s"?eml=${request.username}").get
+//      else 
+        WS.url(url).get
+    }
+
+    resp.map(r => Ok(r.json))
   }
 
   def login = Action { implicit request =>
@@ -108,12 +130,12 @@ object Application extends Controller with MongoController with ProfileService {
 
   def ajaxSessionDataGet(sessionId: String) = Authenticated.async { implicit request =>
     var q = Json.obj("eml" -> request.username, "session" -> sessionId)
-    val startTime = request.getQueryString("startTime") 
-    val endTime = request.getQueryString("endTime") 
+    val startTime = request.getQueryString("startTime")
+    val endTime = request.getQueryString("endTime")
 
     val cursor = collSessionLogs.find(q).sort(Json.obj("time" -> 1)).cursor[JsObject]
     val js = cursor.collect[List]() map { l1 =>
-      val l2 = l1.filter( j => !(j \ "profileName").asOpt[String].isDefined)
+      val l2 = l1.filter(j => !(j \ "profileName").asOpt[String].isDefined)
       if (l2.size > 2) {
         val timeSlots = l2.map { jsobj => (jsobj \ "time").as[String] }
 
@@ -127,25 +149,25 @@ object Application extends Controller with MongoController with ProfileService {
         val locEndLat = (last \ "kff1006").as[String]
         val locEndLng = (last \ "kff1005").as[String]
 
-        val l = l2.filter{ js =>
-          val t = (js \ "time").as[String] 
+        val l = l2.filter { js =>
+          val t = (js \ "time").as[String]
           t >= timeStart && t <= timeEnd
         }
-        
-        val engineLoadList =  l.map { jsobj => (jsobj \ "k4").asOpt[String].getOrElse("-999") }  filter(_ != "-999")
-        val engineLoadAvg = if(engineLoadList.size > 0) average(engineLoadList.map {_.toDouble}) else -1 
 
-        val engineRPMList =  l.map { jsobj => (jsobj \ "kc").asOpt[String].getOrElse("-999") }  filter(_ != "-999")
-        val engineRPMAvg = if(engineRPMList.size > 0) average(engineRPMList.map {_.toDouble}) else -1
-        
-        val KPLList =  l.map { jsobj => (jsobj \ "kff1203").asOpt[String].getOrElse("-999") }  filter(_ != "-999")
-        val KPLAvg = if(KPLList.size > 0) average(KPLList.map {_.toDouble}) else -1
+        val engineLoadList = l.map { jsobj => (jsobj \ "k4").asOpt[String].getOrElse("-999") } filter (_ != "-999")
+        val engineLoadAvg = if (engineLoadList.size > 0) average(engineLoadList.map { _.toDouble }) else -1
 
-        val speedList =  l.map { jsobj => (jsobj \ "kd").asOpt[String].getOrElse("-999") }  filter(s => s != "-999" && s != "0.0")
-        val speedAvg = if(speedList.size > 0) average(speedList.map {_.toDouble}) else -1
+        val engineRPMList = l.map { jsobj => (jsobj \ "kc").asOpt[String].getOrElse("-999") } filter (_ != "-999")
+        val engineRPMAvg = if (engineRPMList.size > 0) average(engineRPMList.map { _.toDouble }) else -1
+
+        val KPLList = l.map { jsobj => (jsobj \ "kff1203").asOpt[String].getOrElse("-999") } filter (_ != "-999")
+        val KPLAvg = if (KPLList.size > 0) average(KPLList.map { _.toDouble }) else -1
+
+        val speedList = l.map { jsobj => (jsobj \ "kd").asOpt[String].getOrElse("-999") } filter (s => s != "-999" && s != "0.0")
+        val speedAvg = if (speedList.size > 0) average(speedList.map { _.toDouble }) else -1
         //println(speedList)
-        val speedMax = if(speedList.size > 0) speedList.map(_.toDouble).max else -1
-        
+        val speedMax = if (speedList.size > 0) speedList.map(_.toDouble).max else -1
+
         Json.obj(
           "start" -> timeStart,
           "end" -> timeEnd,

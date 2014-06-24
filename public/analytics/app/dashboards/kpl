@@ -1,0 +1,360 @@
+{
+  "title": "詳細油耗分析",
+  "services": {
+    "query": {
+      "list": {
+        "0": {
+          "query": "{{ARGS.query || '*'}}",
+          "alias": "",
+          "color": "#0A437C",
+          "id": 0,
+          "pin": true,
+          "type": "lucene",
+          "enable": true
+        },
+        "1": {
+          "id": 1,
+          "color": "#EAB839",
+          "alias": "",
+          "pin": false,
+          "type": "lucene",
+          "enable": true,
+          "query": "{{ARGS.query || '*'}} AND speed: [ 0 TO 39]"
+        },
+        "2": {
+          "id": 2,
+          "color": "#6ED0E0",
+          "alias": "",
+          "pin": false,
+          "type": "lucene",
+          "enable": true,
+          "query": "{{ARGS.query || '*'}} AND speed: [40 TO 69]"
+        },
+        "3": {
+          "id": 3,
+          "color": "#508642",
+          "alias": "",
+          "pin": false,
+          "type": "lucene",
+          "enable": true,
+          "query": "{{ARGS.query || '*'}} AND speed: [70 TO 300]"
+        }
+      },
+      "ids": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "filter": {
+      "list": {},
+      "ids": []
+    }
+  },
+  "rows": [
+    {
+      "title": "圖表",
+      "height": "650px",
+      "editable": false,
+      "collapse": false,
+      "collapsable": true,
+      "panels": [
+        {
+          "error": false,
+          "span": 3,
+          "editable": false,
+          "type": "column",
+          "loadingEditor": false,
+          "panels": [
+            {
+              "loading": false,
+              "error": false,
+              "sizeable": false,
+              "draggable": false,
+              "removable": false,
+              "span": 10,
+              "height": "200px",
+              "editable": false,
+              "type": "terms",
+              "tmode": "terms",
+              "field": "sessionName",
+              "size": 10,
+              "order": "reverse_term",
+              "chart": "table",
+              "exclude": [],
+              "missing": false,
+              "other": false,
+              "style": {
+                "font-size": "10pt"
+              },
+              "donut": false,
+              "tilt": false,
+              "labels": true,
+              "arrangement": "horizontal",
+              "counter_pos": "above",
+              "spyable": false,
+              "queries": {
+                "mode": "all",
+                "ids": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "tstat": "total",
+              "valuefield": "",
+              "title": "最近10次路程"
+            },
+            {
+              "type": "stats",
+              "height": "80px",
+              "queries": {
+                "mode": "selected",
+                "ids": [
+                  0
+                ]
+              },
+              "style": {
+                "font-size": "24pt"
+              },
+              "format": "float",
+              "mode": "mean",
+              "display_breakdown": "no",
+              "sort_field": "",
+              "sort_reverse": false,
+              "label_name": "Query",
+              "value_name": "Value",
+              "spyable": false,
+              "show": {
+                "count": false,
+                "min": false,
+                "max": false,
+                "mean": false,
+                "std_deviation": false,
+                "sum_of_squares": false,
+                "total": false,
+                "variance": false
+              },
+              "title": "整體油耗",
+              "field": "kpl",
+              "editable": false,
+              "unit": "kpl"
+            },
+            {
+              "type": "stats",
+              "height": "80px",
+              "queries": {
+                "mode": "selected",
+                "ids": [
+                  2
+                ]
+              },
+              "style": {
+                "font-size": "24pt"
+              },
+              "format": "float",
+              "mode": "mean",
+              "display_breakdown": "no",
+              "sort_field": "",
+              "sort_reverse": false,
+              "label_name": "Query",
+              "value_name": "Value",
+              "spyable": false,
+              "show": {
+                "count": false,
+                "min": false,
+                "max": false,
+                "mean": false,
+                "std_deviation": false,
+                "sum_of_squares": false,
+                "total": false,
+                "variance": false
+              },
+              "title": "中速油耗 (40km/h 至 70km/h)",
+              "field": "kpl",
+              "editable": false,
+              "unit": "kpl"
+            },
+            {
+              "type": "stats",
+              "height": "80px",
+              "queries": {
+                "mode": "selected",
+                "ids": [
+                  3
+                ]
+              },
+              "style": {
+                "font-size": "24pt"
+              },
+              "format": "float",
+              "mode": "mean",
+              "display_breakdown": "no",
+              "sort_field": "",
+              "sort_reverse": false,
+              "label_name": "Query",
+              "value_name": "Value",
+              "spyable": false,
+              "show": {
+                "count": false,
+                "min": false,
+                "max": false,
+                "mean": false,
+                "std_deviation": false,
+                "sum_of_squares": false,
+                "total": false,
+                "variance": false
+              },
+              "title": "高速油耗",
+              "editable": false,
+              "field": "kpl",
+              "unit": "kpl"
+            }
+          ],
+          "title": "選項"
+        },
+        {
+          "error": false,
+          "span": 9,
+          "editable": false,
+          "type": "bettermap",
+          "loadingEditor": false,
+          "field": "geoPoint",
+          "size": 1000,
+          "spyable": false,
+          "tooltip": "@timestamp",
+          "queries": {
+            "mode": "all",
+            "ids": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "title": "路段"
+        }
+      ],
+      "notice": false
+    },
+    {
+      "title": "Log",
+      "height": "250px",
+      "editable": false,
+      "collapse": true,
+      "collapsable": true,
+      "panels": [
+        {
+          "error": false,
+          "span": 12,
+          "editable": false,
+          "type": "table",
+          "loadingEditor": false,
+          "size": 100,
+          "pages": 5,
+          "offset": 0,
+          "sort": [
+            "_score",
+            "desc"
+          ],
+          "overflow": "min-height",
+          "fields": [],
+          "highlight": [],
+          "sortable": true,
+          "header": true,
+          "paging": true,
+          "field_list": true,
+          "all_fields": false,
+          "trimFactor": 300,
+          "localTime": false,
+          "timeField": "@timestamp",
+          "spyable": false,
+          "queries": {
+            "mode": "all",
+            "ids": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "style": {
+            "font-size": "9pt"
+          },
+          "normTimes": true,
+          "title": "logs"
+        }
+      ],
+      "notice": false
+    }
+  ],
+  "editable": false,
+  "failover": false,
+  "index": {
+    "interval": "none",
+    "pattern": "[logstash-]YYYY.MM.DD",
+    "default": "obddata",
+    "warm_fields": false
+  },
+  "style": "light",
+  "panel_hints": true,
+  "pulldowns": [
+    {
+      "style": "light",
+      "type": "filtering",
+      "collapse": false,
+      "notice": true,
+      "enable": true
+    }
+  ],
+  "nav": [
+    {
+      "type": "timepicker",
+      "collapse": false,
+      "notice": false,
+      "enable": true,
+      "status": "Stable",
+      "time_options": [
+        "5m",
+        "15m",
+        "1h",
+        "6h",
+        "12h",
+        "24h",
+        "2d",
+        "7d",
+        "30d"
+      ],
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ],
+      "timefield": "@timestamp"
+    }
+  ],
+  "loader": {
+    "save_gist": false,
+    "save_elasticsearch": false,
+    "save_local": false,
+    "save_default": false,
+    "save_temp": false,
+    "save_temp_ttl_enable": false,
+    "save_temp_ttl": "30d",
+    "load_gist": false,
+    "load_elasticsearch": false,
+    "load_elasticsearch_size": 20,
+    "load_local": false,
+    "hide": true
+  },
+  "refresh": false
+}

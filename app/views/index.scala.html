@@ -1,4 +1,4 @@
-@(message: String)
+@(username:String)
 
 @main("Home") {
 	<div ng-app="app">
@@ -12,6 +12,10 @@
 	  </ul>
 	  
 	  <hr/>
+	  
+	  <ul class="list-unstyled m-t-md">
+	  	<li><a href="http://localhost:9000/assets/analytics/index.html#/dashboard/file/kpl?query=eml:@{username}">詳細油耗分析</a></li>
+	  </ul>
 	  
 	</div>
 <div class="col-md-7">

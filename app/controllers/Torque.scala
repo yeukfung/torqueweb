@@ -81,7 +81,7 @@ object Torque extends Controller with MongoController {
     def dr(fld: String) = (__ \ fld).readOpt[String].map(s => JsNumber(s.getOrElse("0.0").toDouble))
 
     val logToOBDDataJs = (
-      (__ \ 'sessionName).json.copyFrom(((__ \ 'time).read[String]).map(s => JsString("trip - " + dateFormat.format(new Date(s.toLong))))) and
+      (__ \ 'sessionName).json.copyFrom(((__ \ 'session).read[String]).map(s => JsString("trip - " + dateFormat.format(new Date(s.toLong))))) and
       (__ \ 'speed).json.copyFrom(dr("kd")) and
       (__ \ 'engineLoad).json.copyFrom(dr("k4")) and
       (__ \ 'engineRPM).json.copyFrom(dr("kc")) and
@@ -142,6 +142,7 @@ object Torque extends Controller with MongoController {
           if (geoPoint1.isDefined && geoPoint2.isDefined)
             newJs = newJs ++ Json.obj("geoPoint" -> Json.arr(geoPoint1, geoPoint2))
 
+            println("js to save: " + newJs)
           esClient.index("obddata", "torquelogs", id, newJs)
         }
       }

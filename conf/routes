@@ -2,6 +2,12 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
+# redirect es backend
+GET    /es/*url                           controllers.Application.esRedirect(url)
+POST   /es/*url                           controllers.Application.esRedirect(url)
+PUT   /es/*url                           controllers.Application.esRedirect(url)
+DELETE   /es/*url                           controllers.Application.esRedirect(url)
+
 # Home page
 GET    /                             controllers.Application.index
 
@@ -18,6 +24,8 @@ GET    /api/sessiondata/:sessionId   controllers.Application.ajaxSessionDataGet(
 
 GET    /torque/sendToES              controllers.Torque.submitToElasticSearch
 GET    /torque/pruneData/:apiKey     controllers.Torque.pruneData(apiKey:String)
+
+
 
 # Map static resources from the /public folder to the /assets URL path
 GET    /assets/*file                 controllers.Assets.at(path="/public", file)
