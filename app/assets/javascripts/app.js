@@ -1,7 +1,7 @@
 var mod = angular.module("app", ['ngResource','ngMap']);
 
 mod.controller("MainCtrl", ["$scope","$resource", function($scope, $resource){
-  var Session = $resource('/api/sessions/:id', {id:'@id'});
+  var Session = $resource('/api/sessions/:id', {id:'@session'});
   var SessionData = $resource('/api/sessiondata/:id', {id:'@id'});
   
   
@@ -62,5 +62,27 @@ mod.controller("MainCtrl", ["$scope","$resource", function($scope, $resource){
     }
   });
   
+  $scope.hasSessionName = function(sess){
+    var flag = sess.sessionName != undefined && sess.sessionName != ""; 
+//    console.log(flag);
+    return flag;
+  }
+  
+  $scope.updateSessionName = function(sess) {
+    console.log(sess);
+    sess.$save(function(){
+      $scope.sessions = Session.query();
+    });
+//    Session.update({id:sess.session}, function(){
+//      
+//    });
+  }
+  
+  $scope.deleteSelectedSession = function(sessionId) {
+    Session.remove({session: sessionId}, function(){
+      $scope.selectedSession = undefined;
+      $scope.sessions = Session.query();
+    });
+  } 
   
 }]);

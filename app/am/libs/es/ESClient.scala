@@ -58,6 +58,11 @@ class ESClient(esURL: String) {
     val url = s"$esURL/$index/_search"
     WS.url(url).post(query)
   }
+  
+  def deleteByQuery(index:String, t:String, queryStr:String): Future[Response] = {
+    val url = baseUrl(index, t, s"_query?q=$queryStr")
+    WS.url(url).delete()
+  }
 
   //  /**
   //   * Query ElasticSearch for it's health.

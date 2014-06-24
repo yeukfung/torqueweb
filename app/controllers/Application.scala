@@ -12,6 +12,7 @@ import play.api.libs.ws.WS
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+import am.libs.es.ESClient
 
 object Application extends Controller with MongoController with ProfileService {
 
@@ -20,18 +21,17 @@ object Application extends Controller with MongoController with ProfileService {
   }
 
   val esSvr = "http://localhost:9200/"
+  val esClient = new ESClient(esSvr)
+  
   def esRedirect(urlpath: String) = Authenticated.async { implicit request =>
+
     val url = esSvr + urlpath;
     println(url);
     val resp = request.method.toLowerCase() match {
       case "post" => WS.url(url).post(request.body.asJson.getOrElse(Json.obj()))
       case "put" => WS.url(url).put(request.body.asJson.getOrElse(Json.obj()))
       case "delete" => WS.url(url).delete()
-      case _ => 
-//        if (request.path.contains("""dashboard"""))
-//        WS.url(url + s"?eml=${request.username}").get
-//      else 
-        WS.url(url).get
+      case _ => WS.url(url).get
     }
 
     resp.map(r => Ok(r.json))
@@ -83,7 +83,46 @@ object Application extends Controller with MongoController with ProfileService {
     }
   }
 
-  val removeUsedField = ((__ \ "default").json.prune andThen (__ \ "user").json.prune)
+  val removeUsedField = ((__ \ "default").json.prune andThen (__ \ "user").json.prune andThen (__ \ "profile").json.prune)
+
+  val removeIdField = (__ \ "_id").json.prune andThen (__ \ "id").json.prune
+  
+  def ajaxSessionUpdate(sessionId: String) = Authenticated.async { implicit request =>
+    val q = Json.obj("eml" -> request.username, "session" -> sessionId)
+    val js = request.body.asJson.get
+    
+    var jsToUpdate = Json.obj("indexed" -> false)
+    (js \ "sessionName").asOpt[String] map {v => jsToUpdate = jsToUpdate ++ Json.obj("sessionName" -> v)}
+    
+    for {
+      updateOk <- collHeaders.update(q, Json.obj("$set" -> js.transform(removeIdField).get))
+      sessionUpdateOk <- collSessionLogs.update(q, Json.obj("$set" -> jsToUpdate), multi = true)
+    } yield {
+      Ok(Json.obj("id" -> sessionId))
+    }
+  }
+
+  /**
+   * load the logs to delete, and remove in both header, logs, and the submit the delete query to backend elasticsearch server
+   */
+  def ajaxSessionDelete(sessionId: String) = Authenticated.async { implicit request =>
+    val q = Json.obj("eml" -> request.username, "session" -> sessionId)
+    
+    for {
+      logs <- collSessionLogs.find(q).cursor[JsObject].collect[List]()
+      sessRemoveOk <- collSessionLogs.remove(q, firstMatchOnly = false)
+      headerRemoveOk <- collHeaders.remove(q)
+    } yield {
+      
+      logs.foreach{ l =>
+        val eml = (l \ "eml").as[String]
+        val session = (l \ "session").as[String]
+        esClient.deleteByQuery("obddata", "torquelogs", s"+eml:$eml +session:$session")
+      }
+      
+      Ok(Json.obj("id" -> sessionId))
+    }
+  }
 
   def ajaxSessionsGet = Authenticated.async { implicit request =>
     val q = Json.obj("eml" -> request.username)

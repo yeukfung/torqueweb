@@ -71,7 +71,13 @@ object Torque extends Controller with MongoController {
 		  "torquelogs" : {
 		  "properties" : {
 		  "sessionName" : {
-		  "type" : "string", "index" : "not_analyzed"
+		  	"type" : "string", "index" : "not_analyzed"
+		  },
+		  "session" : {
+		  	"type" : "string", "index" : "not_analyzed"
+		  },
+		  "eml" : {
+		  	"type" : "string", "index" : "not_analyzed"
 		  }
 		  }
 		  }
@@ -110,20 +116,20 @@ object Torque extends Controller with MongoController {
     val logToCoreData = (
       (__ \ 'id).json.copyFrom((__ \ "_id" \ "$oid").json.pick[JsString]) and
       (__ \ 'eml).json.copyFrom((__ \ 'eml).json.pick) and
+      (__ \ 'session).json.copyFrom((__ \ 'session).json.pick) and
       (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))) reduce
 
     val result = for {
       data <- collSessionLogs.find(Json.obj("indexed" -> false)).cursor[JsObject].collect[List]()
     } yield {
       Logger.info(s"<-- got ${data.size} to perform index")
-      
+
       data.foreach { js =>
         if (!(js \ "profileName").asOpt[JsValue].isDefined) {
 
           val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
           val js2 = js.transform(logToCoreData).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
 
-          
           val id = (js \ "_id" \ "$oid").as[String]
 
           val geoPoint1 = (js \ "kff1005").asOpt[String].map(_.toDouble)
@@ -134,13 +140,15 @@ object Torque extends Controller with MongoController {
           if (geoPoint1.isDefined && geoPoint2.isDefined)
             newJs = newJs ++ Json.obj("geoPoint" -> Json.arr(geoPoint1, geoPoint2))
 
+          (js \ "sessionName").asOpt[String] map { v => newJs = newJs ++ Json.obj("sessionName" -> v) }
+
           esClient.index("obddata", "torquelogs", id, newJs)
-          
-          val q = Json.obj("_id" -> Json.obj("$oid"-> id))
+
+          val q = Json.obj("_id" -> Json.obj("$oid" -> id))
           collSessionLogs.update(q, Json.obj("$set" -> Json.obj("indexed" -> true)))
         }
       }
-      
+
       Logger.info(s"index action completed -->")
       Ok("done")
     }
@@ -165,7 +173,7 @@ object Torque extends Controller with MongoController {
     (__ \ 'time).json.pickBranch and
     (__ \ 'session).json.pickBranch and
     (__ \ 'eml).json.pickBranch and
-    (__ \ 'id).json.pickBranch) reduce
+    (__ \ 'id).json.copyFrom((__ \ 'session).json.pick)) reduce
 
   val removeTime = (__ \ 'time).json.prune
 
@@ -210,7 +218,7 @@ object Torque extends Controller with MongoController {
         } else {
           if (data.toString.contains(":")) {
             // has data and
-            
+
             val result = collSessionLogs.insert(js ++ Json.obj("indexed" -> false))
             result map { le =>
               Ok("OK!")

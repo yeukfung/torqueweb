@@ -4,12 +4,20 @@
 	<div ng-app="app">
 	<div ng-controller="MainCtrl">
 	
-	<div class="col-md-2">
+	<div class="col-md-3">
 	
 	<h5>1. select the session</h5>
 	  <ul class="list-unstyled sessions m-t-md">
-	  <li  ng-repeat="sess in sessions" ng-class="{active: sess.session == selectedSession}" ng-click="selectSession(sess.session)"> {{sess.time | date:'yyyy/MM/dd HH:mm:ss'}}</li>
+	  <li  ng-repeat="sess in sessions" ng-class="{active: sess.session == selectedSession}" ng-click="selectSession(sess.session)">
+	  <span ng-show="hasSessionName(sess) && (!sess.$editing || sess.$editing == false)">{{sess.sessionName}}</span> 
+	  <span ng-show="!hasSessionName(sess) && (!sess.$editing || sess.$editing == false)">{{sess.time | date:'yyyy/MM/dd HH:mm:ss'}}</span>
+	  <span ng-show="sess.$editing == true"><input type="text" ng-model="sess.sessionName"></span>
+      <span ng-show="sess.session == selectedSession" > - 
+	    <a href="" ng-show="!sess.$editing || sess.$editing == false"  ng-click="sess.$editing = true"> edit </a> 
+	    <a href="" ng-show="sess.$editing == true" ng-click="updateSessionName(sess)"> done </a>
+	    <a href="" ng-show="sess.$editing == true" ng-click="sess.$editing = false"> cancel </a> <a href="" ng-click="deleteSelectedSession(sess.session)"> del </a> </span></li>
 	  </ul>
+
 	  
 	  <hr/>
 	  
@@ -17,8 +25,10 @@
 	  	<li><a href="http://localhost:9000/assets/analytics/index.html#/dashboard/file/kpl?query=eml:@{username}">詳細油耗分析</a></li>
 	  </ul>
 	  
+	  
+	  
 	</div>
-<div class="col-md-7">
+<div class="col-md-6">
 	<div class="m-t-md">
   start :  <select ng-model="selectedStartTime" ng-options="timeslot as (timeslot | date:'yyyy/MM/dd HH:mm:ss' ) for timeslot in currentData.timeslots"></select>
   &nbsp; &nbsp; end : <select ng-model="selectedEndTime" ng-options="timeslot as (timeslot | date:'yyyy/MM/dd HH:mm:ss' ) for timeslot in currentData.timeslots"></select>

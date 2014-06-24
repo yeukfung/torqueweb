@@ -20,7 +20,11 @@ GET      /torque                       controllers.Torque.upload
 POST     /torque                       controllers.Torque.upload
 
 GET      /api/sessions                 controllers.Application.ajaxSessionsGet
+DELETE   /api/sessions/:sessionId      controllers.Application.ajaxSessionDelete(sessionId)
+PUT      /api/sessions/:sessionId      controllers.Application.ajaxSessionUpdate(sessionId)
+POST      /api/sessions/:sessionId      controllers.Application.ajaxSessionUpdate(sessionId)
 GET      /api/sessiondata/:sessionId   controllers.Application.ajaxSessionDataGet(sessionId)
+
 
 GET      /torque/pruneData/:apiKey     controllers.Torque.pruneData(apiKey:String)
 
