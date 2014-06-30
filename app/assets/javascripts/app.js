@@ -15,8 +15,6 @@ mod.controller("MainCtrl", ["$scope","$resource", function($scope, $resource){
     $scope.selectedSession = sess;
   }
   
-  
-  
   $scope.applyStartEndTime = function(){
     var data = SessionData.get({id: $scope.selectedSession, startTime: $scope.selectedStartTime, endTime: $scope.selectedEndTime}, function(){
       $scope.selectedStartTime = data.start;
@@ -54,8 +52,6 @@ mod.controller("MainCtrl", ["$scope","$resource", function($scope, $resource){
       $scope.mapEndMarker.setMap($scope.map);
       $scope.mapEndMarker.setVisible(true);
 
-//      $scope.mapStartMarker.setAnimation(google.maps.Animation.BOUNCE);
-//      $scope.mapEndMarker.setAnimation(google.maps.Animation.DROP);
     } else {
       $scope.mapStartMarker.setVisible(false);
       $scope.mapEndMarker.setVisible(false);
@@ -64,7 +60,6 @@ mod.controller("MainCtrl", ["$scope","$resource", function($scope, $resource){
   
   $scope.hasSessionName = function(sess){
     var flag = sess.sessionName != undefined && sess.sessionName != ""; 
-//    console.log(flag);
     return flag;
   }
   
@@ -73,9 +68,6 @@ mod.controller("MainCtrl", ["$scope","$resource", function($scope, $resource){
     sess.$save(function(){
       $scope.sessions = Session.query();
     });
-//    Session.update({id:sess.session}, function(){
-//      
-//    });
   }
   
   $scope.deleteSelectedSession = function(sessionId) {

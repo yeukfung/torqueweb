@@ -17,19 +17,11 @@ import java.text.SimpleDateFormat
 import play.api.templates.Html
 import reactivemongo.bson.BSONDocument
 import play.api.Logger
+import daos.SessionLogDao
+import daos.SessionHeaderDao
+import models.UserProfile
 
 object Torque extends Controller with MongoController {
-
-  def collHeaders: JSONCollection = db.collection[JSONCollection]("sessionheaders")
-  def collSessionLogs: JSONCollection = db.collection[JSONCollection]("sessionlogs")
-
-  private def tryPerform(f: () => Future[Boolean]): Future[Boolean] = {
-    try {
-      f().fallbackTo(Future(false))
-    } catch {
-      case _: Throwable => Future(false)
-    }
-  }
 
   val pruneId = (__ \ "_id").json.prune
   //val updateKdToNumber = (__ \ "kd").json.update(__.read[JsObject].map { s => println(s); s })
@@ -66,25 +58,6 @@ object Torque extends Controller with MongoController {
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
-  val jsonSetting = Json.parse("""
-		  {
-		  "torquelogs" : {
-		  "properties" : {
-		  "sessionName" : {
-		  	"type" : "string", "index" : "not_analyzed"
-		  },
-		  "session" : {
-		  	"type" : "string", "index" : "not_analyzed"
-		  },
-		  "eml" : {
-		  	"type" : "string", "index" : "not_analyzed"
-		  }
-		  }
-		  }
-		  }
-		  
-		  """).as[JsObject]
-
   def submitToElasticSearch = Action.async {
     //    val esHost = "http://192.168.8.139:9200";
 
@@ -120,7 +93,7 @@ object Torque extends Controller with MongoController {
       (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))) reduce
 
     val result = for {
-      data <- collSessionLogs.find(Json.obj("indexed" -> false)).cursor[JsObject].collect[List]()
+      data <- SessionLogDao.find(Json.obj("indexed" -> false))
     } yield {
       Logger.info(s"<-- got ${data.size} to perform index")
 
@@ -145,7 +118,7 @@ object Torque extends Controller with MongoController {
           esClient.index("obddata", "torquelogs", id, newJs)
 
           val q = Json.obj("_id" -> Json.obj("$oid" -> id))
-          collSessionLogs.update(q, Json.obj("$set" -> Json.obj("indexed" -> true)))
+          SessionLogDao.update(q, Json.obj("$set" -> Json.obj("indexed" -> true)))
         }
       }
 
@@ -153,19 +126,6 @@ object Torque extends Controller with MongoController {
       Ok("done")
     }
     result
-  }
-
-  def pruneData(apiKey: String) = Action.async { request =>
-
-    if (apiKey == "Dkd9ea29ud") {
-      for {
-        result1 <- tryPerform(collHeaders.drop)
-        result2 <- tryPerform(collSessionLogs.drop)
-      } yield {
-        Ok
-      }
-    } else Future.successful(Forbidden)
-
   }
 
   val requiredField = (
@@ -185,7 +145,7 @@ object Torque extends Controller with MongoController {
       (__ \ 'id).json.prune
 
   def upload = Action.async { request =>
-    println(request)
+
     val flattenMap = request.queryString.map { qMap =>
       (qMap._1, qMap._2.head)
     }
@@ -194,40 +154,51 @@ object Torque extends Controller with MongoController {
 
     js.validate(requiredField) match {
       case s: JsSuccess[JsObject] =>
-        val data = js.transform(removeRequiredField).get
+        val eml = (js \ "eml").as[String]
+        UserProfile.getProfileByEmail(eml) flatMap { profile =>
 
-        if (data.toString.contains("default") || data.toString.contains("user") || data.toString.contains("profile")) {
-          // header item
+          val mainResult = profile map { p =>
+            val data = js.transform(removeRequiredField).get
 
-          val cursor = collHeaders.find(s.get.transform(removeTime).get).cursor[JsObject]
-          cursor.collect[List]().map { l =>
-            val fieldName = if (data.toString.contains("default")) "default" else if (data.toString.contains("default")) "user" else "profile"
-            val updateData = Json.obj(fieldName -> data)
+            if (data.toString.contains("default") || data.toString.contains("user") || data.toString.contains("profile")) {
+              // header item
 
-            if (l.size > 0) {
-              val objId = l.head \ "_id"
-              val updateCmd = Json.obj("$set" -> updateData)
-              collHeaders.update(Json.obj("_id" -> objId), updateCmd)
+              SessionHeaderDao.find(s.get.transform(removeTime).get).map { l =>
+                val fieldName = if (data.toString.contains("default")) "default" else if (data.toString.contains("default")) "user" else "profile"
+                val updateData = Json.obj(fieldName -> data)
+
+                if (l.size > 0) {
+                  val objId = l.head \ "_id"
+                  val updateCmd = Json.obj("$set" -> updateData)
+                  SessionHeaderDao.update(Json.obj("_id" -> objId), updateCmd)
+                } else {
+                  SessionHeaderDao.insert(s.get ++ updateData)
+                }
+
+                Ok("OK!")
+              }
+
             } else {
-              collHeaders.insert(s.get ++ updateData)
+              if (data.toString.contains(":")) {
+                // has data and
+
+                val result = SessionLogDao.insert(js ++ Json.obj("indexed" -> false))
+                result map { le =>
+                  Ok("OK!")
+                }
+              } else {
+                // has no data
+
+                Future.successful(BadRequest("ERR!"))
+              }
             }
 
-            Ok("OK!")
+          } getOrElse {
+            Future.successful(Unauthorized("ERR!"))
           }
 
-        } else {
-          if (data.toString.contains(":")) {
-            // has data and
+          mainResult
 
-            val result = collSessionLogs.insert(js ++ Json.obj("indexed" -> false))
-            result map { le =>
-              Ok("OK!")
-            }
-          } else {
-            // has no data
-
-            Future.successful(BadRequest("ERR!"))
-          }
         }
       case e: JsError =>
         Future.successful(BadRequest("ERR!"))
@@ -237,25 +208,4 @@ object Torque extends Controller with MongoController {
 
   }
 
-  /** admin db **/
-  def resetAllLogAndIndex(apiKey: String) = Action.async {
-    if ("kdkfei12123dkei4p" == apiKey) {
-
-      val q = Json.obj()
-      // reset 
-      for {
-        deleteOk <- esClient.deleteIndex("obddata")
-        createOk <- esClient.createIndex("obddata", Some(jsonSetting))
-        mappingOk <- esClient.index("obddata", "torquelogs", "_mapping", jsonSetting)
-        cntLog <- collSessionLogs.find(q).cursor[JsObject].collect[List]()
-        updateLog <- collSessionLogs.update(q, Json.obj("$set" -> Json.obj("indexed" -> false)), multi = true)
-      } yield {
-        // mark all field to indexed = false
-        val r = s"delete: ${deleteOk.body} <br/>createOk: ${createOk.body} <br/>mappingOk: ${mappingOk.body} <br/>countLog: ${cntLog.size}<br/>updateLog: ${updateLog.stringify}"
-
-        Ok(Html("done with result: <br/><br/><br/>" + r))
-      }
-
-    } else Future.successful(Ok("?"))
-  }
 }

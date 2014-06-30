@@ -3,10 +3,10 @@
 # ~~~~
 
 # redirect es backend
-GET      /es/*url                      controllers.Application.esRedirect(url)
-POST     /es/*url                      controllers.Application.esRedirect(url)
-PUT      /es/*url                      controllers.Application.esRedirect(url)
-DELETE   /es/*url                      controllers.Application.esRedirect(url)
+GET      /es/*url                      controllers.ElasticSearch.esRedirect(url)
+POST     /es/*url                      controllers.ElasticSearch.esRedirect(url)
+PUT      /es/*url                      controllers.ElasticSearch.esRedirect(url)
+DELETE   /es/*url                      controllers.ElasticSearch.esRedirect(url)
 
 # Home page
 GET      /                             controllers.Application.index
@@ -19,17 +19,18 @@ GET      /logout                       controllers.Application.logout
 GET      /torque                       controllers.Torque.upload
 POST     /torque                       controllers.Torque.upload
 
-GET      /api/sessions                 controllers.Application.ajaxSessionsGet
-DELETE   /api/sessions/:sessionId      controllers.Application.ajaxSessionDelete(sessionId)
-PUT      /api/sessions/:sessionId      controllers.Application.ajaxSessionUpdate(sessionId)
-POST      /api/sessions/:sessionId      controllers.Application.ajaxSessionUpdate(sessionId)
-GET      /api/sessiondata/:sessionId   controllers.Application.ajaxSessionDataGet(sessionId)
+# api
+GET      /api/sessions                 controllers.Api.ajaxSessionsGet
+DELETE   /api/sessions/:sessionId      controllers.Api.ajaxSessionDelete(sessionId)
+PUT      /api/sessions/:sessionId      controllers.Api.ajaxSessionUpdate(sessionId)
+POST     /api/sessions/:sessionId      controllers.Api.ajaxSessionUpdate(sessionId)
+GET      /api/sessiondata/:sessionId   controllers.Api.ajaxSessionDataGet(sessionId)
 
 
-GET      /torque/pruneData/:apiKey     controllers.Torque.pruneData(apiKey:String)
+GET      /torque/pruneData/:apiKey     controllers.Admin.pruneData(apiKey:String)
 
 GET      /torque/sendToES              controllers.Torque.submitToElasticSearch
-GET      /admin/reset/:apiKey          controllers.Torque.resetAllLogAndIndex(apiKey)
+GET      /admin/reset/:apiKey          controllers.Admin.resetAllLogAndIndex(apiKey)
 
 
 # Map static resources from the /public folder to the /assets URL path

@@ -1,14 +1,41 @@
-詳細油耗分析
+restructure website:
+- Admin page (mark the email to either realtime version or normal version, by updating profile)
+- Admin page, prune or delete rtobddata
+- Admin page, change API key
 
-四個不同
 
-以不同 TRIP   | MAP
+- Torque page, can edit realtime db
 
-全部
-低速40以下
-中速41﹣70
-高速
+- realtime index, create
 
+- system will prune the data over 30 days for realtime
+
+Spec
+User should
+  - receive error on invalid user profile
+  - able upload the data via torque
+  - receive error on invalid torque data
+  - receive OK on valid torque
+  - able to adjust if the update is realtime or not in user interface
+  - group log by tags
+  
+Raceing Manager
+  - can create race id
+  - all the realtime data are stored 10 days
+  
+
+Admin should
+  - create userProfile with different row
+  - delete userProfile
+  - update userProfile
+  
+
+
+Power from throttle
+- Torque
+- low-end range
+- high-end range
+- percentagate of sample
 
 
 
