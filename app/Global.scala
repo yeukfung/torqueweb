@@ -1,9 +1,14 @@
+import play.api._
+import helpers.Log
+import daos.InitDBDao
 
+object Global extends GlobalSettings with Log {
 
-import play.api.GlobalSettings
-import play.api.libs.concurrent.Akka
+  override def onStart(app: Application) {
+    log.info("Application has started")
 
-object Global extends GlobalSettings {
-
+    log.debug("loading mongodb ensure index")
+    InitDBDao.ensureIndex
+  }
 
 }

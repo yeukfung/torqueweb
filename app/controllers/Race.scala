@@ -9,4 +9,8 @@ object Race extends Controller with MySecured {
   def index = Authenticated(role = Some(UserProfile.ROLE_race)).async {
     Future.successful(Ok("TODO"))
   }
+
+  def settings = Authenticated(role = Some(UserProfile.ROLE_race)).async {
+    Future.successful(Ok("TODO"))
+  }
 }

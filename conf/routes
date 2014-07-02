@@ -12,7 +12,10 @@ DELETE   /es/*url                      controllers.ElasticSearch.esRedirect(url)
 GET      /                             controllers.Application.index
 
 # race page
+GET      /race/settings                controllers.Race.settings
 GET      /race                         controllers.Race.index
+
+# admin page
 GET      /admin                        controllers.Admin.index
 
 GET      /login                        controllers.Application.login

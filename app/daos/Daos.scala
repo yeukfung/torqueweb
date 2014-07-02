@@ -1,14 +1,25 @@
 package daos
 
-import play.modules.reactivemongo.json.collection.JSONCollection
-import play.modules.reactivemongo.MongoController
 import play.api.mvc.Controller
 import play.api.libs.json.JsObject
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 import models.UserProfile
 import play.api.libs.json.Format
-import play.api.libs.json.Json
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import models.RaceCar
+import models.Race
+import reactivemongo.api._
+import play.modules.reactivemongo.json.collection.JSONCollection
+import play.modules.reactivemongo.MongoController
+import reactivemongo.core.commands.Command
+import reactivemongo.core.commands.FindAndModify
+import reactivemongo.core.commands.Update
+import reactivemongo.bson.BSONDocument
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import helpers.Log
 
 trait BaseDao extends Controller with MongoController {
 
@@ -32,6 +43,7 @@ trait BaseDao extends Controller with MongoController {
   def remove(q: JsObject, firstMatchOnly: Boolean = false) = coll.remove(q, firstMatchOnly = firstMatchOnly)
 }
 
+
 trait BaseTypedDao[T] extends BaseDao {
   def insertT(obj: T)(implicit fmt: Format[T]) = coll.insert(obj)
 
@@ -54,4 +66,12 @@ object SessionLogDao extends BaseDao { val dbName = "sessionlogs" }
 object UserProfileDao extends BaseTypedDao[UserProfile] {
   val dbName = "userprofiles"
 
+}
+
+object RaceDao extends BaseTypedDao[Race] {
+  val dbName = "races"
+}
+
+object RaceCarDao extends BaseTypedDao[RaceCar] {
+  val dbName = "racecars"
 }

@@ -14,6 +14,7 @@ import play.api.libs.json._
 import play.api.libs.json.Reads._
 import models.UserProfile
 import org.openqa.selenium.chrome.ChromeDriver
+import daos.RaceCarDao
 
 trait ChromeWebDriver {
   System.setProperty("webdriver.chrome.driver", "driver/mac/chromedriver");
@@ -56,6 +57,18 @@ trait SpecUtil extends DefaultDur with ChromeWebDriver { this: Specification =>
   }
 
   /**
+   * race util
+   */
+  object raceUtil {
+
+    def createRaceCar(eml: String, js: JsObject): JsObject = {
+      val obj = js ++ Json.obj("parent" -> eml)
+      val r = RaceCarDao.insert(obj).map { _ => obj }
+      Await.result(r, dur)
+    }
+  }
+
+  /**
    * admin util
    */
 
@@ -64,7 +77,7 @@ trait SpecUtil extends DefaultDur with ChromeWebDriver { this: Specification =>
     val samplePass = "12345"
     implicit val userFormat = UserProfile.fmt
 
-    def createUser(eml: String, role:String = UserProfile.ROLE_normal) = {
+    def createUser(eml: String, role: String = UserProfile.ROLE_normal) = {
       val userProfile = UserProfile.createUserWithPass(eml, samplePass, "name of " + eml, role = role)
       val result = Await.result(upDao.insertT(userProfile) map (_.ok), dur)
       result must beTrue
