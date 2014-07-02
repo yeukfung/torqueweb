@@ -10,9 +10,14 @@ import play.api.templates.Html
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 import daos.SessionHeaderDao
+import models.UserProfile
 
 object Admin extends Controller with MySecured {
 
+  def index = Authenticated(role = Some(UserProfile.ROLE_admin)).async {
+    Future.successful(Ok("TODO"))
+  }
+  
   val jsonSetting = Json.parse("""
 		  {
 		  "torquelogs" : {
@@ -33,7 +38,7 @@ object Admin extends Controller with MySecured {
 		  """).as[JsObject]
 
   /** admin db **/
-  def resetAllLogAndIndex(apiKey: String) = Action.async {
+  def resetAllLogAndIndex(apiKey: String) = Authenticated(role = Some(UserProfile.ROLE_admin)).async { request =>
     if ("kdkfei12123dkei4p" == apiKey) {
 
       val q = Json.obj()
@@ -54,7 +59,7 @@ object Admin extends Controller with MySecured {
     } else Future.successful(Ok("?"))
   }
 
-  def pruneData(apiKey: String) = Action.async { request =>
+  def pruneData(apiKey: String) = Authenticated(role = Some(UserProfile.ROLE_admin)).async { request =>
 
     if (apiKey == "Dkd9ea29ud") {
       for {

@@ -11,6 +11,10 @@ DELETE   /es/*url                      controllers.ElasticSearch.esRedirect(url)
 # Home page
 GET      /                             controllers.Application.index
 
+# race page
+GET      /race                         controllers.Race.index
+GET      /admin                        controllers.Admin.index
+
 GET      /login                        controllers.Application.login
 POST     /login                        controllers.Application.checkLogin
 
@@ -21,6 +25,7 @@ POST     /torque                       controllers.Torque.upload
 
 # api
 GET      /api/sessions                 controllers.Api.ajaxSessionsGet
+DELETE   /api/sessions                 controllers.Api.ajaxSessionDelete(sessionId = "0")
 DELETE   /api/sessions/:sessionId      controllers.Api.ajaxSessionDelete(sessionId)
 PUT      /api/sessions/:sessionId      controllers.Api.ajaxSessionUpdate(sessionId)
 POST     /api/sessions/:sessionId      controllers.Api.ajaxSessionUpdate(sessionId)

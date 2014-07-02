@@ -20,46 +20,44 @@ import play.api.Logger
 import daos.SessionLogDao
 import daos.SessionHeaderDao
 import models.UserProfile
+import models.ES
 
 object Torque extends Controller with MongoController {
 
   val pruneId = (__ \ "_id").json.prune
   //val updateKdToNumber = (__ \ "kd").json.update(__.read[JsObject].map { s => println(s); s })
 
-  val pidMap = Map(
-    "04" -> ("Engine Load", "%"),
-    "0c" -> ("Engine RPM", "rpm"),
-    "11" -> ("Throttle Position(Manifold)", "%"),
-    "ff1203" -> ("Kilometers Per Litre(Instant)", "kpl"),
-    "0d" -> ("Speed", "km/h"),
-    "ff1249" -> ("Air Fuel Ratio(Measured)", "1"),
-    "0f" -> ("Intake Air Temperature", "°C"),
-    "0b" -> ("Intake Manifold Pressure", "kPa"),
+//  val pidMap = Map(
+//    "04" -> ("Engine Load", "%"),
+//    "0c" -> ("Engine RPM", "rpm"),
+//    "11" -> ("Throttle Position(Manifold)", "%"),
+//    "ff1203" -> ("Kilometers Per Litre(Instant)", "kpl"),
+//    "0d" -> ("Speed", "km/h"),
+//    "ff1249" -> ("Air Fuel Ratio(Measured)", "1"),
+//    "0f" -> ("Intake Air Temperature", "°C"),
+//    "0b" -> ("Intake Manifold Pressure", "kPa"),
+//
+//    "ff1258" -> ("CO2 in g/km (Average)", "g/km"),
+//    "05" -> ("Engine Coolant Temperature", "°C"),
+//    "ff1257" -> ("CO2 in g/km (Instantaneous)", "g/km"),
+//    "ff125d" -> ("Fuel flow rate/hour", "l/hr"),
+//    "2f" -> ("Fuel Level", "%"),
+//    "0a" -> ("Fuel Pressure", "kPa"),
+//    "10" -> ("Mass Air Flow Rate", "g/s"),
+//    "0e" -> ("Timing Advance", "°"),
+//    "ff1202" -> ("Turbo Boost & Vacuum Gauge", "psi"),
+//    "ff1238" -> ("Voltage (OBD Adapter)", "V"),
+//    "ff1273" -> ("Engine kW(At the wheels)", "kW"),
+//    "ff1270" -> ("Barometer (on Android device)", "mb"),
+//    "ff1225" -> ("Torque", "ft-lb"),
+//
+//    "ff124d" -> ("Air Fuel Ratio(Commanded)", "1"))
 
-    "ff1258" -> ("CO2 in g/km (Average)", "g/km"),
-    "05" -> ("Engine Coolant Temperature", "°C"),
-    "ff1257" -> ("CO2 in g/km (Instantaneous)", "g/km"),
-    "ff125d" -> ("Fuel flow rate/hour", "l/hr"),
-    "2f" -> ("Fuel Level", "%"),
-    "0a" -> ("Fuel Pressure", "kPa"),
-    "10" -> ("Mass Air Flow Rate", "g/s"),
-    "0e" -> ("Timing Advance", "°"),
-    "ff1202" -> ("Turbo Boost & Vacuum Gauge", "psi"),
-    "ff1238" -> ("Voltage (OBD Adapter)", "V"),
-    "ff1273" -> ("Engine kW(At the wheels)", "kW"),
-    "ff1270" -> ("Barometer (on Android device)", "mb"),
-    "ff1225" -> ("Torque", "ft-lb"),
-
-    "ff124d" -> ("Air Fuel Ratio(Commanded)", "1"))
-
-  val esHost = "http://localhost:9200";
-
-  val esClient = new ESClient(esHost)
+  val esClient = ES.esClient
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
   def submitToElasticSearch = Action.async {
-    //    val esHost = "http://192.168.8.139:9200";
 
     // to double read
     def dr(fld: String) = (__ \ fld).readOpt[String].map(s => JsNumber(s.getOrElse("0.0").toDouble))
@@ -128,6 +126,7 @@ object Torque extends Controller with MongoController {
     result
   }
 
+  
   val requiredField = (
     (__ \ 'v).json.pickBranch and
     (__ \ 'time).json.pickBranch and
@@ -144,6 +143,7 @@ object Torque extends Controller with MongoController {
       (__ \ 'eml).json.prune andThen
       (__ \ 'id).json.prune
 
+  /** upload **/
   def upload = Action.async { request =>
 
     val flattenMap = request.queryString.map { qMap =>
@@ -158,6 +158,7 @@ object Torque extends Controller with MongoController {
         UserProfile.getProfileByEmail(eml) flatMap { profile =>
 
           val mainResult = profile map { p =>
+
             val data = js.transform(removeRequiredField).get
 
             if (data.toString.contains("default") || data.toString.contains("user") || data.toString.contains("profile")) {
@@ -181,14 +182,11 @@ object Torque extends Controller with MongoController {
             } else {
               if (data.toString.contains(":")) {
                 // has data and
-
                 val result = SessionLogDao.insert(js ++ Json.obj("indexed" -> false))
-                result map { le =>
-                  Ok("OK!")
-                }
+                result map { le => Ok("OK!") }
+
               } else {
                 // has no data
-
                 Future.successful(BadRequest("ERR!"))
               }
             }

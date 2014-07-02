@@ -12,10 +12,13 @@ import play.api.libs.ws.WS
 import am.libs.es.ESClient
 import daos.SessionHeaderDao
 import models.ES
+import play.api.i18n.Messages
+import play.api.libs.Crypto
+import models.UserProfile
 
-object Application extends Controller with ProfileService with MySecured {
+object Application extends Controller with MySecured {
 
-  def index = Authenticated { request =>
+  def index = Authenticated() { request =>
     Ok(views.html.index(request.username))
   }
 
@@ -27,26 +30,35 @@ object Application extends Controller with ProfileService with MySecured {
     Redirect(routes.Application.login).withNewSession
   }
 
-  case class LoginData(email: String)
+  case class LoginData(email: String, password: String)
 
   import play.api.data._
   import play.api.data.Forms._
-  val loginForm = Form(mapping("email" -> nonEmptyText)(LoginData.apply)(LoginData.unapply))
+  val loginForm = Form(mapping("email" -> nonEmptyText, "password" -> nonEmptyText)(LoginData.apply)(LoginData.unapply))
 
   def checkLogin = Action.async { implicit request =>
     loginForm.bindFromRequest.fold(
 
       formWithErrors => {
-        Future.successful(Redirect(routes.Application.login).flashing("msg" -> "email missing"))
+        Future.successful(Redirect(routes.Application.login).flashing("msg" -> Messages("login.required")))
       },
 
       loginData => {
         val email = loginData.email
-        hasEmail(email) map { flag =>
-          if (flag) {
-            Redirect(routes.Application.index).withSession("email" -> email)
+        val pass = loginData.password
+        val signedPass = Crypto.sign(pass)
+
+        UserProfile.getByLoginData(email, signedPass) map { optProfile =>
+          if (optProfile.isDefined) {
+            val redirectUrl = optProfile.get.role match {
+              case UserProfile.ROLE_race => routes.Race.index
+              case UserProfile.ROLE_admin => routes.Admin.index
+              case _ => routes.Application.index
+            }
+            Redirect(redirectUrl).withSession(("email" -> email), ("role" -> optProfile.get.role))
+            
           } else {
-            Redirect(routes.Application.login).flashing("msg" -> "email is invalid")
+            Redirect(routes.Application.login).flashing("msg" -> Messages("login.invalid"))
           }
         }
       })
@@ -54,11 +66,3 @@ object Application extends Controller with ProfileService with MySecured {
 
 }
 
-trait ProfileService extends MongoController { this: Controller =>
-
-  def hasEmail(email: String): Future[Boolean] = {
-    val q = Json.obj("eml" -> email)
-    SessionHeaderDao.findFirst(q).map { _.isDefined }
-  }
-
-}

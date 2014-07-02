@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 
 object ElasticSearch extends Controller with MySecured {
 
-  def esRedirect(urlpath: String) = Authenticated.async { implicit request =>
+  def esRedirect(urlpath: String) = Authenticated().async { implicit request =>
 
     val url = ES.esSvrHost + urlpath;
     println(url);

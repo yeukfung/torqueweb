@@ -1,0 +1,2 @@
+login.required=both email and password are required
+login.invalid=invalid login

@@ -7,14 +7,17 @@
 @flash.get("msg").map { msg =>
   <div class="has-error">
   <br/>
-  	<label class="control-label">@msg</label>
+  	<label id="errmsg" class="control-label">@msg</label>
   </div>
 }
   <h2>&nbsp;</h2>
   <h5>Please enter your email to enter</h5>  
-  <form action="@routes.Application.checkLogin()" method="post">
+  <form action="@routes.Application.checkLogin()" method="post" id="loginForm">
     <div class="form-group">
-    <input type="email" name="email" class="form-control text-center">
+    <input id="email" type="email" name="email" class="form-control text-center">
+    </div>
+    <div class="form-group">
+    <input id="password" type="password" name="password" class="form-control text-center">
     </div>
     <div class="form-group">
       <input type="submit" value="Enter">

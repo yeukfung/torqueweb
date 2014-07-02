@@ -6,15 +6,31 @@ import play.api.mvc.Request
 import scala.concurrent.Future
 import play.api.mvc.Results.Redirect
 import play.api.mvc.SimpleResult
+import play.api.mvc.Action
+import models.UserProfile
+import play.api.mvc.Results
 
 trait MySecured {
+
   class AuthenticatedRequest[A](val username: String, request: Request[A]) extends WrappedRequest[A](request)
 
-  object Authenticated extends ActionBuilder[AuthenticatedRequest] {
+  def Authenticated(role: Option[String] = None) = new ActionBuilder[AuthenticatedRequest] {
+
     def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]) = {
-      request.session.get("email").map { username =>
-        block(new AuthenticatedRequest(username, request))
-      } getOrElse {
+      val requiredRole = role getOrElse UserProfile.ROLE_normal
+      val result = for {
+        eml <- request.session.get("email")
+        role <- request.session.get("role")
+      } yield {
+        if ((requiredRole == role) ||
+          (role == UserProfile.ROLE_admin) ||
+          (requiredRole == UserProfile.ROLE_normal && role == UserProfile.ROLE_race))
+          block(new AuthenticatedRequest(eml, request))
+        else
+          Future.successful(Results.Unauthorized("role does not match"))
+      }
+
+      result getOrElse {
         Future.successful(Redirect(routes.Application.login))
       }
     }

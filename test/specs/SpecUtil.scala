@@ -13,12 +13,18 @@ import scala.concurrent.duration.Duration
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import models.UserProfile
+import org.openqa.selenium.chrome.ChromeDriver
+
+trait ChromeWebDriver {
+  System.setProperty("webdriver.chrome.driver", "driver/mac/chromedriver");
+  val CHROME = classOf[ChromeDriver]
+}
 
 trait DefaultDur {
   implicit val dur: Duration = Duration(5, "seconds")
 }
 
-trait SpecUtil extends DefaultDur { this: Specification =>
+trait SpecUtil extends DefaultDur with ChromeWebDriver { this: Specification =>
 
   lazy val shDao = SessionHeaderDao
   lazy val slDao = SessionLogDao
@@ -58,13 +64,13 @@ trait SpecUtil extends DefaultDur { this: Specification =>
     val samplePass = "12345"
     implicit val userFormat = UserProfile.fmt
 
-    def createUser(eml: String) = {
-      val userProfile = UserProfile.createUserWithPass(eml, samplePass, "name of " + eml)
+    def createUser(eml: String, role:String = UserProfile.ROLE_normal) = {
+      val userProfile = UserProfile.createUserWithPass(eml, samplePass, "name of " + eml, role = role)
       val result = Await.result(upDao.insertT(userProfile) map (_.ok), dur)
       result must beTrue
       result
     }
-    
+
   }
 
 }

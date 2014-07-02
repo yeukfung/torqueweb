@@ -14,7 +14,7 @@ object Api extends Controller with MySecured {
 
   val removeIdField = (__ \ "_id").json.prune andThen (__ \ "id").json.prune
 
-  def ajaxSessionUpdate(sessionId: String) = Authenticated.async { implicit request =>
+  def ajaxSessionUpdate(sessionId: String) = Authenticated().async { implicit request =>
     val q = Json.obj("eml" -> request.username, "session" -> sessionId)
     val js = request.body.asJson.get
 
@@ -28,13 +28,13 @@ object Api extends Controller with MySecured {
       Ok(Json.obj("id" -> sessionId))
     }
   }
-
   
   /**
    * load the logs to delete, and remove in both header, logs, and the submit the delete query to backend elasticsearch server
    */
-  def ajaxSessionDelete(sessionId: String) = Authenticated.async { implicit request =>
-    val q = Json.obj("eml" -> request.username, "session" -> sessionId)
+  def ajaxSessionDelete(sessionId: String) = Authenticated().async { implicit request =>
+    val sid = request.getQueryString("session").getOrElse (sessionId)
+    val q = Json.obj("eml" -> request.username, "session" -> sid)
 
     for {
       logs <- SessionLogDao.find(q)
@@ -45,14 +45,14 @@ object Api extends Controller with MySecured {
       logs.foreach { l =>
         val eml = (l \ "eml").as[String]
         val session = (l \ "session").as[String]
-        ES.esClient.deleteByQuery("obddata", "torquelogs", s"+eml:$eml +session:$session")
+        ES.esClient.deleteByQuery("obddata", "torquelogs", s"+eml:$eml+session:$session")
       }
 
       Ok(Json.obj("id" -> sessionId))
     }
   }
 
-  def ajaxSessionsGet = Authenticated.async { implicit request =>
+  def ajaxSessionsGet = Authenticated().async { implicit request =>
     val q = Json.obj("eml" -> request.username)
     SessionHeaderDao.find(q) map { l => Ok(l.foldLeft(Json.arr())((acc, item) => acc ++ Json.arr(item.transform(removeUsedField).get))) }
   }
@@ -61,7 +61,7 @@ object Api extends Controller with MySecured {
     num.toDouble(ts.sum) / ts.size
   }
 
-  def ajaxSessionDataGet(sessionId: String) = Authenticated.async { implicit request =>
+  def ajaxSessionDataGet(sessionId: String) = Authenticated().async { implicit request =>
     var q = Json.obj("eml" -> request.username, "session" -> sessionId)
     val startTime = request.getQueryString("startTime")
     val endTime = request.getQueryString("endTime")
@@ -73,15 +73,19 @@ object Api extends Controller with MySecured {
       if (l2.size > 2) {
         val timeSlots = l2.map { jsobj => (jsobj \ "time").as[String] }
 
+        /*
+         * default HK
+         * 22°15′N 114°10′E
+         */
         val head = startTime map (t => l2.filter(l => (l \ "time").as[String] >= t).head) getOrElse l2.head
         val timeStart = (head \ "time").as[String]
-        val locStartLat = (head \ "kff1006").as[String]
-        val locStartLng = (head \ "kff1005").as[String]
+        val locStartLat = (head \ "kff1006").asOpt[String] getOrElse ("22.15")
+        val locStartLng = (head \ "kff1005").asOpt[String] getOrElse ("114.10")
 
         val last = endTime map (t => l2.filter(l => (l \ "time").as[String] <= t).last) getOrElse l2.last
         val timeEnd = (last \ "time").as[String]
-        val locEndLat = (last \ "kff1006").as[String]
-        val locEndLng = (last \ "kff1005").as[String]
+        val locEndLat = (last \ "kff1006").asOpt[String] getOrElse ("22.15")
+        val locEndLng = (last \ "kff1005").asOpt[String] getOrElse ("114.10")
 
         val l = l2.filter { js =>
           val t = (js \ "time").as[String]
@@ -116,7 +120,6 @@ object Api extends Controller with MySecured {
       } else {
         Json.obj();
       }
-
     }
 
     js map (Ok(_))
