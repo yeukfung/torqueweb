@@ -1,0 +1,10 @@
+@* race Template File *@
+@(content:Html)(implicit reqHeader:views.MyRequestHeader)
+
+@main("race") {
+	@inc.header()
+	
+	<div class="container">
+		@content
+	</div>
+}

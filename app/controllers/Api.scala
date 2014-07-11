@@ -116,7 +116,8 @@ object Api extends Controller with MySecured {
           "engineRPMAvg" -> engineRPMAvg,
           "kplAvg" -> KPLAvg,
           "speedAvg" -> speedAvg,
-          "speedMax" -> speedMax)
+          "speedMax" -> speedMax
+          )
       } else {
         Json.obj();
       }

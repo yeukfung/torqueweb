@@ -9,8 +9,12 @@ import play.api.mvc.SimpleResult
 import play.api.mvc.Action
 import models.UserProfile
 import play.api.mvc.Results
+import views.MyRequestHeader
+import scala.concurrent.Await
+import helpers.DefaultDur
+import scala.concurrent.ExecutionContext.Implicits._
 
-trait MySecured {
+trait MySecured extends DefaultDur {
 
   class AuthenticatedRequest[A](val username: String, request: Request[A]) extends WrappedRequest[A](request)
 
@@ -36,4 +40,5 @@ trait MySecured {
     }
   }
 
+  implicit def toMyRequestHeader[A](implicit req: AuthenticatedRequest[A]): MyRequestHeader = Await.result(UserProfile.getProfileByEmail(req.username).map { u => MyRequestHeader(u) }, dur)
 }

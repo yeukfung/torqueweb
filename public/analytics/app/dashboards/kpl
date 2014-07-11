@@ -79,7 +79,7 @@
               "type": "terms",
               "tmode": "terms",
               "field": "sessionName",
-              "size": 10,
+              "size": 20,
               "order": "reverse_term",
               "chart": "table",
               "exclude": [],
@@ -105,7 +105,7 @@
               },
               "tstat": "total",
               "valuefield": "",
-              "title": "最近10次路程"
+              "title": "最近20次路程"
             },
             {
               "type": "stats",

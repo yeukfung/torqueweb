@@ -15,14 +15,11 @@ import play.api.libs.json.Reads._
 import models.UserProfile
 import org.openqa.selenium.chrome.ChromeDriver
 import daos.RaceCarDao
+import helpers.DefaultDur
 
 trait ChromeWebDriver {
   System.setProperty("webdriver.chrome.driver", "driver/mac/chromedriver");
   val CHROME = classOf[ChromeDriver]
-}
-
-trait DefaultDur {
-  implicit val dur: Duration = Duration(5, "seconds")
 }
 
 trait SpecUtil extends DefaultDur with ChromeWebDriver { this: Specification =>

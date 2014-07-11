@@ -4,7 +4,7 @@
 	<div ng-app="app">
 	<div ng-controller="MainCtrl">
 	
-	<div class="col-md-3">
+	<div class="col-sm-3">
 	
 	<h5>1. select the session</h5>
 	  <ul class="list-unstyled sessions m-t-md">
@@ -28,7 +28,7 @@
 	  
 	  
 	</div>
-<div class="col-md-6">
+<div class="col-sm-6">
 	<div class="m-t-md">
   start :  <select ng-model="selectedStartTime" ng-options="timeslot as (timeslot | date:'yyyy/MM/dd HH:mm:ss' ) for timeslot in currentData.timeslots"></select>
   &nbsp; &nbsp; end : <select ng-model="selectedEndTime" ng-options="timeslot as (timeslot | date:'yyyy/MM/dd HH:mm:ss' ) for timeslot in currentData.timeslots"></select>
@@ -42,7 +42,7 @@
 
 
 </div>	
-	<div class="col-md-3">
+	<div class="col-sm-3">
 
 	  <dl class="dl-horizontal m-t-md ">
   <dt>engine load avg</dt>
@@ -66,7 +66,7 @@
 	</div>
 	</div>
 	
-	<div class="col-md-12 text-center m-t-md">
+	<div class="col-sm-12 text-center m-t-md">
 	<hr/>
 	<a class="m-t-md" href="@routes.Application.logout">change user?</a> </div>
 	<script src="@routes.Assets.at("javascripts/app.js")" type="text/javascript"></script>

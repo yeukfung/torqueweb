@@ -1,3 +1,8 @@
+bugs:
+v - make the site ipad friendly 
+v - make the time show in correct timezone
+- enhance the performance by only looping once in calculation
+
 restructure website:
 - Admin page (mark the email to either realtime version or normal version, by updating profile)
 - Admin page, prune or delete rtobddata
