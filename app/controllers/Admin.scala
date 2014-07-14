@@ -48,7 +48,7 @@ object Admin extends Controller with MySecured {
         createOk <- ES.esClient.createIndex("obddata", Some(jsonSetting))
         mappingOk <- ES.esClient.index("obddata", "torquelogs", "_mapping", jsonSetting)
         cntLog <- SessionLogDao.find(q)
-        updateLog <- SessionLogDao.update(q, Json.obj("$set" -> Json.obj("indexed" -> false)), multi = true)
+        updateLog <- SessionLogDao.update(q, Json.obj("indexed" -> false), multi = true)
       } yield {
         // mark all field to indexed = false
         val r = s"delete: ${deleteOk.body} <br/>createOk: ${createOk.body} <br/>mappingOk: ${mappingOk.body} <br/>countLog: ${cntLog.size}<br/>updateLog: ${updateLog.stringify}"
