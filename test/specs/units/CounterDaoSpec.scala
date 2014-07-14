@@ -3,9 +3,9 @@ package specs.units
 import org.specs2.mutable.Specification
 import daos.CounterDao
 import scala.concurrent.Await
-import specs.DefaultDur
 import scala.concurrent.ExecutionContext.Implicits._
 import play.api.test.WithApplication
+import helpers.DefaultDur
 
 class CounterDaoSpec extends Specification with DefaultDur {
 

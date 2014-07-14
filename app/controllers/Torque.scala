@@ -89,7 +89,7 @@ object Torque extends Controller with MongoController {
       (__ \ 'eml).json.copyFrom((__ \ 'eml).json.pick) and
       (__ \ 'session).json.copyFrom((__ \ 'session).json.pick) and
       (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))) reduce
-
+      
     val result = for {
       data <- SessionLogDao.find(Json.obj("indexed" -> false))
     } yield {

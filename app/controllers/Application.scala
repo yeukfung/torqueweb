@@ -15,8 +15,9 @@ import models.ES
 import play.api.i18n.Messages
 import play.api.libs.Crypto
 import models.UserProfile
+import helpers.Log
 
-object Application extends Controller with MySecured {
+object Application extends Controller with MySecured with Log {
 
   def index = Authenticated() { request =>
     Ok(views.html.index(request.username))
@@ -48,6 +49,7 @@ object Application extends Controller with MySecured {
         val pass = loginData.password
         val signedPass = Crypto.sign(pass)
 
+        log.debug(s"email = $email, signedPass = $signedPass")
         UserProfile.getByLoginData(email, signedPass) map { optProfile =>
           if (optProfile.isDefined) {
             val redirectUrl = optProfile.get.role match {
@@ -55,8 +57,8 @@ object Application extends Controller with MySecured {
               case UserProfile.ROLE_admin => routes.Admin.index
               case _ => routes.Application.index
             }
-            Redirect(redirectUrl).withSession(("email" -> email), ("role" -> optProfile.get.role))
-            
+            Redirect(redirectUrl).withSession(("email" -> email), ("role" -> optProfile.get.role), ("userId" -> optProfile.get.id.get))
+
           } else {
             Redirect(routes.Application.login).flashing("msg" -> Messages("login.invalid"))
           }

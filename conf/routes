@@ -11,6 +11,9 @@ DELETE   /es/*url                      controllers.ElasticSearch.esRedirect(url)
 # Home page
 GET      /                             controllers.Application.index
 
+# user
+GET      /user/profile                 controllers.User.profile
+
 # race page
 GET      /race/settings                controllers.Race.settings
 GET      /race                         controllers.Race.index
@@ -34,6 +37,13 @@ PUT      /api/sessions/:sessionId      controllers.Api.ajaxSessionUpdate(session
 POST     /api/sessions/:sessionId      controllers.Api.ajaxSessionUpdate(sessionId)
 GET      /api/sessiondata/:sessionId   controllers.Api.ajaxSessionDataGet(sessionId)
 
+# api - user profile
+GET      /api/users                    controllers.Api.ajaxUserProfileGet(userId = "")
+GET      /api/users/:userId            controllers.Api.ajaxUserProfileGet(userId)
+POST     /api/users                    controllers.Api.ajaxUserProfileSave(userId = "")
+POST     /api/users/:userId            controllers.Api.ajaxUserProfileSave(userId)
+PUT      /api/users/:userId            controllers.Api.ajaxUserProfileSave(userId)
+DELETE   /api/users/:userId            controllers.Api.ajaxUserProfileDelete(userId)
 
 GET      /torque/pruneData/:apiKey     controllers.Admin.pruneData(apiKey:String)
 

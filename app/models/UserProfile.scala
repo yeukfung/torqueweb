@@ -38,6 +38,7 @@ case class UserProfile(
   passwordHash: String,
   name: String,
   role: String = UserProfile.ROLE_normal, // normal, admin, race
+  disabled: Option[Boolean] = Some(false),
   id: Option[String] = None)
 
 

@@ -14,10 +14,10 @@ import models.UserProfile
 
 object Admin extends Controller with MySecured {
 
-  def index = Authenticated(role = Some(UserProfile.ROLE_admin)).async {
-    Future.successful(Ok("TODO"))
+  def index = Authenticated(role = Some(UserProfile.ROLE_admin)).async { implicit request =>
+    Future.successful(Ok(views.html.admin.index()))
   }
-  
+
   val jsonSetting = Json.parse("""
 		  {
 		  "torquelogs" : {

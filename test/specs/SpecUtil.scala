@@ -16,6 +16,8 @@ import models.UserProfile
 import org.openqa.selenium.chrome.ChromeDriver
 import daos.RaceCarDao
 import helpers.DefaultDur
+import play.api.mvc.Cookie
+import play.api.mvc.Cookies
 
 trait ChromeWebDriver {
   System.setProperty("webdriver.chrome.driver", "driver/mac/chromedriver");
@@ -76,11 +78,25 @@ trait SpecUtil extends DefaultDur with ChromeWebDriver { this: Specification =>
 
     def createUser(eml: String, role: String = UserProfile.ROLE_normal) = {
       val userProfile = UserProfile.createUserWithPass(eml, samplePass, "name of " + eml, role = role)
-      val result = Await.result(upDao.insertT(userProfile) map (_.ok), dur)
+      val result = Await.result(upDao.insertT(userProfile) map { js => (js \ "id").asOpt[JsValue].isDefined }, dur)
       result must beTrue
       result
     }
 
+  }
+
+  /**
+   * web util
+   */
+  object webUtil {
+
+    val loginPath = "/login"
+    def login(eml: String, pass: String): Cookies = {
+      val result = route(FakeRequest(POST, loginPath).withFormUrlEncodedBody(("email" -> eml), ("password" -> pass))).get
+      status(result) must_== SEE_OTHER
+      session(result).get("email") must beSome
+      cookies(result)
+    }
   }
 
 }

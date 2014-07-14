@@ -7,8 +7,57 @@ import daos.SessionHeaderDao
 import daos.SessionLogDao
 import scala.concurrent.ExecutionContext.Implicits._
 import models.ES
+import daos.UserProfileDao
+import scala.concurrent.Future
+import play.api.libs.Crypto
+import helpers.Log
 
-object Api extends Controller with MySecured {
+trait UserProfileApi extends Log {
+  this: Controller with MySecured =>
+
+  val updatePasswordHashIfPresent = ((__ \ "passwordHash").json.copyFrom((__ \ "pass").json.pick.map { pass => JsString(Crypto.sign(pass.as[String])) }) and (__ \ "pass").json.prune) reduce
+
+  val removePass = (__ \ "pass").json.prune andThen (__ \ "passwordHash").json.prune
+
+  /**
+   * only user or admin is allowed to do save
+   */
+  def ajaxUserProfileSave(userId: String) = Authenticated().async { request =>
+    if (request.isAdmin || userId == request.userId) {
+      request.body.asJson map {
+        case js: JsObject =>
+          log.debug(s"ajaxUserProfileSave: js = $js")
+          (js \ "pass").asOpt[JsValue] match {
+            case Some(js1) =>
+              val toSave = js.transform(updatePasswordHashIfPresent).get
+              log.debug(toSave.toString)
+              UserProfileDao.insert(toSave) map { r => Ok(r.transform(removePass).get) }
+            case None =>
+              log.debug("no pass")
+              UserProfileDao.insert(js) map { r => Ok(r.transform(removePass).get) }
+          }
+
+      } getOrElse (Future.successful(BadRequest("invalid")))
+    } else Future.successful(Unauthorized("unauthorized"))
+
+  }
+
+  def ajaxUserProfileDelete(userId: String) = Authenticated().async { request =>
+    if (request.isAdmin || userId == request.userId) {
+      val id = Json.obj("id" -> userId)
+      UserProfileDao.remove(id, true) map { x => Ok(id) }
+    } else Future.successful(Unauthorized("unauthorized"))
+  }
+
+  implicit def listToJsArray[T](l: List[T])(implicit fmt: Format[T]): JsArray = l.foldLeft(Json.arr())((acc, item) => acc ++ Json.arr(Json.toJson(item).transform(removePass).get))
+
+  def ajaxUserProfileGet(userId: String) = Authenticated().async { request =>
+    val q = if (userId == "") { Json.obj() } else { Json.obj("id" -> userId) }
+    UserProfileDao.findT(q) map { l => Ok(l: JsArray) }
+  }
+}
+
+object Api extends Controller with MySecured with UserProfileApi {
 
   val removeUsedField = ((__ \ "default").json.prune andThen (__ \ "user").json.prune andThen (__ \ "profile").json.prune)
 
@@ -28,12 +77,12 @@ object Api extends Controller with MySecured {
       Ok(Json.obj("id" -> sessionId))
     }
   }
-  
+
   /**
    * load the logs to delete, and remove in both header, logs, and the submit the delete query to backend elasticsearch server
    */
   def ajaxSessionDelete(sessionId: String) = Authenticated().async { implicit request =>
-    val sid = request.getQueryString("session").getOrElse (sessionId)
+    val sid = request.getQueryString("session").getOrElse(sessionId)
     val q = Json.obj("eml" -> request.username, "session" -> sid)
 
     for {
@@ -67,7 +116,7 @@ object Api extends Controller with MySecured {
     val endTime = request.getQueryString("endTime")
 
     val cursor = SessionLogDao.coll.find(q).sort(Json.obj("time" -> 1)).cursor[JsObject]
-    
+
     val js = cursor.collect[List]() map { l1 =>
       val l2 = l1.filter(j => !(j \ "profileName").asOpt[String].isDefined)
       if (l2.size > 2) {
@@ -116,8 +165,7 @@ object Api extends Controller with MySecured {
           "engineRPMAvg" -> engineRPMAvg,
           "kplAvg" -> KPLAvg,
           "speedAvg" -> speedAvg,
-          "speedMax" -> speedMax
-          )
+          "speedMax" -> speedMax)
       } else {
         Json.obj();
       }

@@ -1,7 +1,12 @@
 @* admin Template File *@
-@(param: Any)(implicit reqHeader:views.MyRequestHeader)
+@(content:Html)(implicit reqHeader:views.MyRequestHeader)
 
-@main("admin") {
+@main("admin page") {
 	
+	@inc.header()
+	<div class="container" ng-app="adminapp">
+		@content
+	</div>
+	<script src="@routes.Assets.at("javascripts/admin.js")" type="text/javascript"></script>
 }
 

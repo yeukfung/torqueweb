@@ -16,21 +16,29 @@ import scala.concurrent.ExecutionContext.Implicits._
 
 trait MySecured extends DefaultDur {
 
-  class AuthenticatedRequest[A](val username: String, request: Request[A]) extends WrappedRequest[A](request)
+  class AuthenticatedRequest[A](val username: String, val userId: String, val isAdmin: Boolean, request: Request[A]) extends WrappedRequest[A](request)
 
-  def Authenticated(role: Option[String] = None) = new ActionBuilder[AuthenticatedRequest] {
+  def alwaysTrue(userId: String, eml: String, role: String) = true
+
+  def Authenticated(role: Option[String] = None, authorization: (String, String, String) => Boolean = alwaysTrue) = new ActionBuilder[AuthenticatedRequest] {
 
     def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]) = {
       val requiredRole = role getOrElse UserProfile.ROLE_normal
       val result = for {
+        userId <- request.session.get("userId")
         eml <- request.session.get("email")
         role <- request.session.get("role")
       } yield {
+        val isAdmin = role == UserProfile.ROLE_admin
         if ((requiredRole == role) ||
-          (role == UserProfile.ROLE_admin) ||
-          (requiredRole == UserProfile.ROLE_normal && role == UserProfile.ROLE_race))
-          block(new AuthenticatedRequest(eml, request))
-        else
+          (isAdmin) ||
+          (requiredRole == UserProfile.ROLE_normal && role == UserProfile.ROLE_race)) {
+
+          if (authorization(userId, eml, role)) {
+            block(new AuthenticatedRequest(eml, userId, isAdmin, request))
+          } else
+            Future.successful(Results.Unauthorized("authorization failed"))
+        } else
           Future.successful(Results.Unauthorized("role does not match"))
       }
 

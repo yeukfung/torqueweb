@@ -29,10 +29,5 @@ class RaceUploadSpec extends Specification with SpecUtil {
   def e1 = new WithApplication {
     adminUtil.createUser("race@gmail.com", UserProfile.ROLE_race) must beTrue
 
-    //    val js = Json.parse("""{
-    //      
-    //    }""").as[JsObject]
-
-    //    raceUtil.createRaceCar("race@gmail.com", js)
   }
 }

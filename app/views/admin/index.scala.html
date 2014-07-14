@@ -1,0 +1,72 @@
+@* index Template File *@
+@()(implicit reqHeader:views.MyRequestHeader)
+
+@base.admin {
+
+<div ng-controller="UserController">	
+<h3>Manage Users</h3>
+
+<hr/>
+<div class="col-sm-9">
+  <h4>All Users</h4>
+  <table class="table">
+    <thead><tr>
+    <th>email</th>
+    <th>password</th>
+    <th>name</th>
+    <th>role</th>
+    <th>action</th>
+    </tr></thead>
+    <tbody>
+    <tr ng-repeat="user in users">
+    <td><span ng-show="!user.$editing">{{user.eml}}</span><input ng-show="user.$editing" type="email" ng-model="user.eml"/></td>
+    <td><input ng-show="user.$editing" type="password" name="pass" ng-model="user.pass"/></td>
+    <td><span ng-show="!user.$editing">{{user.name}}</span><input ng-show="user.$editing" type="text" ng-model="user.name"/></td>
+    <td><span ng-show="!user.$editing">{{user.role}}</span><select ng-show="user.$editing" ng-model="user.role" ng-options="role for role in roles"/></td>
+    <td>
+    <a ng-show="!user.$editing" href="" class="btn btn-sm btn-default" ng-click="user.$editing = true">edit</a> 
+    <a ng-show="!user.$editing" href="" class="btn btn-sm btn-default" ng-click="deleteUser(user.id)">delete</a> 
+    <a ng-show="user.$editing" href="" class="btn btn-sm btn-success" ng-click="updateUser(user)">save</a> 
+    <a ng-show="user.$editing" href="" class="btn btn-sm btn-danger" ng-click="user.$editing = false">cancel</a></td>
+    </tr>
+    
+    </tbody>
+  </table> 
+</div>
+
+
+<div class="col-sm-3">
+	<h4>Add New user</h4>
+	<form ng-submit="createUser(cf)" role="form" name="frmCreateUser">
+	  <div class="form-group">
+  		  <label for="email">Email address</label>
+    	  <input type="email" class="form-control" id="email" placeholder="Enter email" name="eml" ng-model="cf.eml" required>
+      </div>
+	  <div class="form-group">
+  		  <label for="pass">password</label>
+    	  <input type="password" class="form-control" id="pass" placeholder="Enter password" name="pass" ng-model="cf.pass" required>
+      </div>
+	  <div class="form-group">
+  		  <label for="name">Name</label>
+    	  <input type="text" class="form-control" id="name" placeholder="Enter name" name="name" ng-model="cf.name" required>
+      </div>
+      <div class="form-group">
+        <label for="role">Role</label>
+        <select name="role" id="role" class="form-control" ng-model="cf.role" ng-options="role for role in roles" required></select>
+      </div>
+
+      <div class="form-group">
+        <label for="disabled">Disabled</label>
+        <select name="disabled" id="disabled" class="form-control" ng-options="val for val in booleans" ng-model="cf.disabled" required></select>
+      </div>
+      
+      <div class="form-group">
+        <input ng-disabled="!frmCreateUser.$valid" type="submit" class="btn btn-primary"/>
+      </div>
+	</form>
+	
+</div>
+
+</div>	
+
+}
