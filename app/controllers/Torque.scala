@@ -21,37 +21,38 @@ import daos.SessionLogDao
 import daos.SessionHeaderDao
 import models.UserProfile
 import models.ES
+import helpers.Log
 
-object Torque extends Controller with MongoController {
+object Torque extends Controller with MongoController with Log {
 
   val pruneId = (__ \ "_id").json.prune
   //val updateKdToNumber = (__ \ "kd").json.update(__.read[JsObject].map { s => println(s); s })
 
-//  val pidMap = Map(
-//    "04" -> ("Engine Load", "%"),
-//    "0c" -> ("Engine RPM", "rpm"),
-//    "11" -> ("Throttle Position(Manifold)", "%"),
-//    "ff1203" -> ("Kilometers Per Litre(Instant)", "kpl"),
-//    "0d" -> ("Speed", "km/h"),
-//    "ff1249" -> ("Air Fuel Ratio(Measured)", "1"),
-//    "0f" -> ("Intake Air Temperature", "°C"),
-//    "0b" -> ("Intake Manifold Pressure", "kPa"),
-//
-//    "ff1258" -> ("CO2 in g/km (Average)", "g/km"),
-//    "05" -> ("Engine Coolant Temperature", "°C"),
-//    "ff1257" -> ("CO2 in g/km (Instantaneous)", "g/km"),
-//    "ff125d" -> ("Fuel flow rate/hour", "l/hr"),
-//    "2f" -> ("Fuel Level", "%"),
-//    "0a" -> ("Fuel Pressure", "kPa"),
-//    "10" -> ("Mass Air Flow Rate", "g/s"),
-//    "0e" -> ("Timing Advance", "°"),
-//    "ff1202" -> ("Turbo Boost & Vacuum Gauge", "psi"),
-//    "ff1238" -> ("Voltage (OBD Adapter)", "V"),
-//    "ff1273" -> ("Engine kW(At the wheels)", "kW"),
-//    "ff1270" -> ("Barometer (on Android device)", "mb"),
-//    "ff1225" -> ("Torque", "ft-lb"),
-//
-//    "ff124d" -> ("Air Fuel Ratio(Commanded)", "1"))
+  //  val pidMap = Map(
+  //    "04" -> ("Engine Load", "%"),
+  //    "0c" -> ("Engine RPM", "rpm"),
+  //    "11" -> ("Throttle Position(Manifold)", "%"),
+  //    "ff1203" -> ("Kilometers Per Litre(Instant)", "kpl"),
+  //    "0d" -> ("Speed", "km/h"),
+  //    "ff1249" -> ("Air Fuel Ratio(Measured)", "1"),
+  //    "0f" -> ("Intake Air Temperature", "°C"),
+  //    "0b" -> ("Intake Manifold Pressure", "kPa"),
+  //
+  //    "ff1258" -> ("CO2 in g/km (Average)", "g/km"),
+  //    "05" -> ("Engine Coolant Temperature", "°C"),
+  //    "ff1257" -> ("CO2 in g/km (Instantaneous)", "g/km"),
+  //    "ff125d" -> ("Fuel flow rate/hour", "l/hr"),
+  //    "2f" -> ("Fuel Level", "%"),
+  //    "0a" -> ("Fuel Pressure", "kPa"),
+  //    "10" -> ("Mass Air Flow Rate", "g/s"),
+  //    "0e" -> ("Timing Advance", "°"),
+  //    "ff1202" -> ("Turbo Boost & Vacuum Gauge", "psi"),
+  //    "ff1238" -> ("Voltage (OBD Adapter)", "V"),
+  //    "ff1273" -> ("Engine kW(At the wheels)", "kW"),
+  //    "ff1270" -> ("Barometer (on Android device)", "mb"),
+  //    "ff1225" -> ("Torque", "ft-lb"),
+  //
+  //    "ff124d" -> ("Air Fuel Ratio(Commanded)", "1"))
 
   val esClient = ES.esClient
 
@@ -90,8 +91,8 @@ object Torque extends Controller with MongoController {
       (__ \ 'session).json.copyFrom((__ \ 'session).json.pick) and
       (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))) reduce
     val q = Json.obj("indexed" -> false)
-//    SessionLogDao.findE(q)
-    
+    //    SessionLogDao.findE(q)
+
     val result = for {
       data <- SessionLogDao.find(q)
     } yield {
@@ -128,7 +129,6 @@ object Torque extends Controller with MongoController {
     result
   }
 
-  
   val requiredField = (
     (__ \ 'v).json.pickBranch and
     (__ \ 'time).json.pickBranch and
@@ -137,13 +137,14 @@ object Torque extends Controller with MongoController {
     (__ \ 'id).json.copyFrom((__ \ 'session).json.pick)) reduce
 
   val removeTime = (__ \ 'time).json.prune
+  val removeId = (__ \ 'id).json.prune
 
   val removeRequiredField =
     (__ \ 'v).json.prune andThen
       removeTime andThen
       (__ \ 'session).json.prune andThen
       (__ \ 'eml).json.prune andThen
-      (__ \ 'id).json.prune
+      removeId
 
   /** upload **/
   def upload = Action.async { request =>
@@ -153,6 +154,7 @@ object Torque extends Controller with MongoController {
     }
 
     val js = Json.toJson(flattenMap).as[JsObject]
+    log.debug(s"js received: $js")
 
     js.validate(requiredField) match {
       case s: JsSuccess[JsObject] =>
@@ -162,6 +164,8 @@ object Torque extends Controller with MongoController {
           val mainResult = profile map { p =>
 
             val data = js.transform(removeRequiredField).get
+
+            log.debug(s"data to persist: $data")
 
             if (data.toString.contains("default") || data.toString.contains("user") || data.toString.contains("profile")) {
               // header item
@@ -175,7 +179,7 @@ object Torque extends Controller with MongoController {
                   val updateCmd = Json.obj("$set" -> updateData)
                   SessionHeaderDao.update(Json.obj("_id" -> objId), updateCmd)
                 } else {
-                  SessionHeaderDao.insert(s.get ++ updateData)
+                  SessionHeaderDao.insert(s.get.transform(removeId).get ++ updateData)
                 }
 
                 Ok("OK!")
@@ -184,7 +188,8 @@ object Torque extends Controller with MongoController {
             } else {
               if (data.toString.contains(":")) {
                 // has data and
-                val result = SessionLogDao.insert(js ++ Json.obj("indexed" -> false))
+                val jsWithoutId = js.transform(removeId).get
+                val result = SessionLogDao.insert(jsWithoutId ++ Json.obj("indexed" -> false))
                 result map { le => Ok("OK!") }
 
               } else {
