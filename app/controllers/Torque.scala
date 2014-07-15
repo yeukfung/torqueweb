@@ -170,7 +170,7 @@ object Torque extends Controller with MongoController with Log {
             if (data.toString.contains("default") || data.toString.contains("user") || data.toString.contains("profile")) {
               // header item
 
-              SessionHeaderDao.find(s.get.transform(removeTime).get).map { l =>
+              SessionHeaderDao.find(s.get.transform(removeTime andThen removeId).get).map { l =>
                 val fieldName = if (data.toString.contains("default")) "default" else if (data.toString.contains("default")) "user" else "profile"
                 val updateData = Json.obj(fieldName -> data)
 

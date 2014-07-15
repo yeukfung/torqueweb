@@ -6,6 +6,10 @@ import play.api.test._
 import play.api.test.Helpers._
 import helpers.MyHelper._
 import specs.SpecUtil
+import daos.SessionHeaderDao
+import play.api.libs.json.Json
+import scala.concurrent.Await
+import daos.SessionLogDao
 
 class UserTorqueUploadSpec extends Specification with SpecUtil {
 
@@ -19,7 +23,8 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
   
   Given: torque uploader with valid header info
   When: user upload the data to webserver
-  Then: server will response OK!								$e1
+  Then: server will response OK!
+  Then: server will only has one session header record			$e1
   
   Given: torque uploader sending invalid item
   When: server receive request
@@ -67,6 +72,9 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
     val result1 = route(FakeRequest(GET, s"/torque?$qstr1")).get
     status(result1) must_== OK
     contentAsString(result1) must_== "OK!"
+      
+    val list = Await.result(SessionHeaderDao.find(Json.obj()), dur)
+    list.size must_== 1
 
   }
 
@@ -116,6 +124,10 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
     status(result) must_== OK
     contentAsString(result) must_== "OK!"
 
+      
+    val list = Await.result(SessionLogDao.find(Json.obj()), dur)
+    list.size must_== 1
+      
   }
 
 }
