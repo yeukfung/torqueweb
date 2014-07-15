@@ -21,15 +21,22 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import helpers.Log
 import reactivemongo.bson.BSONObjectID
+import play.api.libs.iteratee.Enumerator
 
 trait BaseDao extends Controller with MongoController with Log {
 
+  private val MAX_FIND_NUMBER = 5000
   def dbName: String
   def coll: JSONCollection = db.collection[JSONCollection](dbName)
 
-  def find(q: JsObject): Future[List[JsObject]] = {
+  def find(q: JsObject, maxUpTo: Int = MAX_FIND_NUMBER): Future[List[JsObject]] = {
+    val max = if (maxUpTo > MAX_FIND_NUMBER || maxUpTo <= 0) MAX_FIND_NUMBER else maxUpTo
     val cursor = coll.find(q).cursor[JsObject]
-    cursor.collect[List]()
+    cursor.collect[List](max)
+  }
+
+  def findE(q: JsObject): Enumerator[JsObject] = {
+    coll.find(q).cursor[JsObject].enumerate()
   }
 
   def findFirst(q: JsObject): Future[Option[JsObject]] = {
