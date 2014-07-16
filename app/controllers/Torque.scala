@@ -104,7 +104,7 @@ object Torque extends Controller with MongoController with Log {
           val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
           val js2 = js.transform(logToCoreData).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
 
-          val id = (js \ "_id").as[String]
+          val id = (js \ "_id" \ "$oid").asOpt[String] getOrElse { (js \ "_id").as[String] }
 
           val geoPoint1 = (js \ "kff1005").asOpt[String].map(_.toDouble)
           val geoPoint2 = (js \ "kff1006").asOpt[String].map(_.toDouble)
