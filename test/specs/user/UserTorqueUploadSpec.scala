@@ -32,7 +32,10 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
   
   Given: torque uploader is sending sessionData
   When: server receive sessionlog data
-  Then: server will save the data to sessionlogs collection		$e3
+  Then: server will save the data to sessionlogs collection		
+  Then: session log is indexed = false
+  When: server submit the index to elastic search
+  Then: session log is become indexed							$e3
   
   """
 
@@ -128,6 +131,18 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
     val list = Await.result(SessionLogDao.find(Json.obj()), dur)
     list.size must_== 1
       
+    
+    (list.head \ "indexed").as[Boolean] must_== false
+    
+    val es = route(FakeRequest(GET, "/torque/sendToES")).get
+    status(es) must_== OK
+    contentAsString(es) must_== "done"
+      
+    val listAfter = Await.result(SessionLogDao.find(Json.obj()), dur)
+    listAfter.size must_== 1
+    
+    (listAfter.head \ "indexed").as[Boolean] must_== true
+    
   }
 
 }

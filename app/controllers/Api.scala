@@ -71,8 +71,8 @@ object Api extends Controller with MySecured with UserProfileApi {
     (js \ "sessionName").asOpt[String] map { v => jsToUpdate = jsToUpdate ++ Json.obj("sessionName" -> v) }
 
     for {
-      updateOk <- SessionHeaderDao.update(q, Json.obj("$set" -> js.transform(removeIdField).get))
-      sessionUpdateOk <- SessionLogDao.update(q, Json.obj("$set" -> jsToUpdate), multi = true)
+      updateOk <- SessionHeaderDao.update(q, js.transform(removeIdField).get)
+      sessionUpdateOk <- SessionLogDao.update(q, jsToUpdate, multi = true)
     } yield {
       Ok(Json.obj("id" -> sessionId))
     }

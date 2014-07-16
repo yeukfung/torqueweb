@@ -86,7 +86,7 @@ object Torque extends Controller with MongoController with Log {
       (__ \ 'airFuelRatioCmd).json.copyFrom(dr("kff124d"))) reduce
 
     val logToCoreData = (
-      (__ \ 'id).json.copyFrom((__ \ "_id" \ "$oid").json.pick[JsString]) and
+      (__ \ 'id).json.copyFrom((__ \ "_id").json.pick[JsString]) and
       (__ \ 'eml).json.copyFrom((__ \ 'eml).json.pick) and
       (__ \ 'session).json.copyFrom((__ \ 'session).json.pick) and
       (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))) reduce
@@ -104,7 +104,7 @@ object Torque extends Controller with MongoController with Log {
           val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
           val js2 = js.transform(logToCoreData).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
 
-          val id = (js \ "_id" \ "$oid").as[String]
+          val id = (js \ "_id").as[String]
 
           val geoPoint1 = (js \ "kff1005").asOpt[String].map(_.toDouble)
           val geoPoint2 = (js \ "kff1006").asOpt[String].map(_.toDouble)
@@ -118,8 +118,8 @@ object Torque extends Controller with MongoController with Log {
 
           esClient.index("obddata", "torquelogs", id, newJs)
 
-          val q = Json.obj("_id" -> Json.obj("$oid" -> id))
-          SessionLogDao.update(q, Json.obj("$set" -> Json.obj("indexed" -> true)))
+          val q = Json.obj("_id" -> id)
+          SessionLogDao.update(q, Json.obj("indexed" -> true))
         }
       }
 
@@ -176,8 +176,7 @@ object Torque extends Controller with MongoController with Log {
 
                 if (l.size > 0) {
                   val objId = l.head \ "_id"
-                  val updateCmd = Json.obj("$set" -> updateData)
-                  SessionHeaderDao.update(Json.obj("_id" -> objId), updateCmd)
+                  SessionHeaderDao.update(Json.obj("_id" -> objId), updateData)
                 } else {
                   SessionHeaderDao.insert(s.get.transform(removeId).get ++ updateData)
                 }
