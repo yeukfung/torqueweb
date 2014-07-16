@@ -118,7 +118,7 @@ object Torque extends Controller with MongoController with Log {
 
           esClient.index("obddata", "torquelogs", id, newJs)
 
-          val q = Json.obj("_id" -> id)
+          val q = Json.obj("_id" -> (js \ "_id"))
           SessionLogDao.update(q, Json.obj("indexed" -> true))
         }
       }
