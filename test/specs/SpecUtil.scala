@@ -29,14 +29,16 @@ trait SpecUtil extends DefaultDur with ChromeWebDriver { this: Specification =>
   lazy val shDao = SessionHeaderDao
   lazy val slDao = SessionLogDao
   lazy val upDao = UserProfileDao
+  lazy val rcDao = RaceCarDao
 
   def cleanDB = {
     val result = for {
       r1 <- tryPerform(shDao.coll.drop)
       r2 <- tryPerform(slDao.coll.drop)
       r3 <- tryPerform(upDao.coll.drop)
+      r4 <- tryPerform(rcDao.coll.drop)
     } yield {
-      r1 && r2 && r3
+      r1 && r2 && r3 && r4
     }
     Await.result(result, dur)
   }
@@ -101,35 +103,3 @@ trait SpecUtil extends DefaultDur with ChromeWebDriver { this: Specification =>
 
 }
 
-trait SessionLogGenerator {
-
-  def genHeaderQueryString(eml: String = "yeukfung@gmail.com", id: String = "12345") = {
-
-    val sessionId = (System.currentTimeMillis() + 1L)
-
-    val params = Map(
-      "v" -> 7,
-      "eml" -> eml,
-      "id" -> id,
-      "time" -> System.currentTimeMillis(),
-      "session" -> sessionId,
-      "defaultUnit11" -> "",
-      "defaultUnitff1222" -> "g",
-      "defaultUnit0a" -> "kPa")
-    (sessionId, mapToQueryString(params))
-  }
-
-  def genSessionLogQueryString(sessionId: Long, eml: String = "yeukfung@gmail.com", id: String = "12345") = {
-    val params = Map(
-      "v" -> 7,
-      "eml" -> eml,
-      "id" -> id,
-      "time" -> System.currentTimeMillis(),
-      "session" -> sessionId,
-      "defaultUnit11" -> "",
-      "defaultUnitff1222" -> "g",
-      "defaultUnit0a" -> "kPa")
-    mapToQueryString(params)
-  }
-
-}

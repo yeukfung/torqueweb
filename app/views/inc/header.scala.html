@@ -20,6 +20,8 @@
           <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="glyphicon glyphicon-cog"></i> <span class="caret"></span></a>
           <ul class="dropdown-menu" role="menu">
           <li><a href="@routes.User.profile()">Profile</a></li>
+            <li class="divider"></li>
+	  	<li><a href="@routes.Application.index()">Home</a></li>
 
 	@reqHeader.optUserProfile.get.role match {
 	  
@@ -30,6 +32,7 @@
 	  	
 	  }
 	  case UserProfile.ROLE_race => {
+	  	<li><a href="@routes.Race.index()">Race</a></li>
 	  	<li><a href="@routes.Race.settings()">Race Setting</a></li>
 	  }
             

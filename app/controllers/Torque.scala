@@ -22,6 +22,8 @@ import daos.SessionHeaderDao
 import models.UserProfile
 import models.ES
 import helpers.Log
+import models.RaceCar
+import reactivemongo.bson.BSONObjectID
 
 object Torque extends Controller with MongoController with Log {
 
@@ -58,38 +60,59 @@ object Torque extends Controller with MongoController with Log {
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
+  // to double read
+  def dr(fld: String) = (__ \ fld).readOpt[String].map(s => JsNumber(s.getOrElse("0.0").toDouble))
+
+  val logToOBDDataJs = (
+    (__ \ 'sessionName).json.copyFrom(((__ \ 'session).read[String]).map(s => JsString("trip - " + dateFormat.format(new Date(s.toLong))))) and
+    (__ \ 'speed).json.copyFrom(dr("kd")) and
+    (__ \ 'engineLoad).json.copyFrom(dr("k4")) and
+    (__ \ 'engineRPM).json.copyFrom(dr("kc")) and
+    (__ \ 'throttlePos).json.copyFrom(dr("k11")) and
+    (__ \ 'kpl).json.copyFrom(dr("kff1203")) and
+    (__ \ 'airFuelRatio).json.copyFrom(dr("kff1249")) and
+    (__ \ 'intakeAirTemp).json.copyFrom(dr("kf")) and
+    (__ \ 'intakeManifoldPressure).json.copyFrom(dr("kb")) and
+    (__ \ 'engineCoolantTemp).json.copyFrom(dr("k5")) and
+    (__ \ 'co2InGperKM).json.copyFrom(dr("kff1257")) and
+    (__ \ 'fuelFlowRate).json.copyFrom(dr("kff125d")) and
+    (__ \ 'fuelPressure).json.copyFrom(dr("ka")) and
+    (__ \ 'massAirFlowRate).json.copyFrom(dr("k10")) and
+    (__ \ 'timingAdvance).json.copyFrom(dr("ke")) and
+    (__ \ 'vacuum).json.copyFrom(dr("kff1202")) and
+    (__ \ 'voltage).json.copyFrom(dr("kff1238")) and
+    (__ \ 'barometer).json.copyFrom(dr("kff1270")) and
+    (__ \ 'torque).json.copyFrom(dr("kff1225")) and
+    (__ \ 'airFuelRatioCmd).json.copyFrom(dr("kff124d"))) reduce
+
+  val logToCoreData = (
+    (__ \ 'id).json.copyFrom((__ \ "_id").json.pick[JsString]) and
+    (__ \ 'eml).json.copyFrom((__ \ 'eml).json.pick) and
+    (__ \ 'session).json.copyFrom((__ \ 'session).json.pick) and
+    (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))) reduce
+
+  private def doConvertToElasticSearch(js: JsObject): (String, JsObject) = {
+    val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
+    val js2 = js.transform(logToCoreData).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
+
+    val idRead = ((__ \ "_id" \ "$oid").read[String] or (__ \ "_id").read[String] or (__ \ "id").read[String])
+
+    val id = js.validate(idRead).getOrElse("NA")
+
+    val geoPoint1 = (js \ "kff1005").asOpt[String].map(_.toDouble)
+    val geoPoint2 = (js \ "kff1006").asOpt[String].map(_.toDouble)
+
+    var newJs = js1 ++ js2
+
+    if (geoPoint1.isDefined && geoPoint2.isDefined)
+      newJs = newJs ++ Json.obj("geoPoint" -> Json.arr(geoPoint1, geoPoint2))
+
+    (js \ "sessionName").asOpt[String] map { v => newJs = newJs ++ Json.obj("sessionName" -> v) }
+    (id, newJs)
+  }
+
   def submitToElasticSearch = Action.async {
 
-    // to double read
-    def dr(fld: String) = (__ \ fld).readOpt[String].map(s => JsNumber(s.getOrElse("0.0").toDouble))
-
-    val logToOBDDataJs = (
-      (__ \ 'sessionName).json.copyFrom(((__ \ 'session).read[String]).map(s => JsString("trip - " + dateFormat.format(new Date(s.toLong))))) and
-      (__ \ 'speed).json.copyFrom(dr("kd")) and
-      (__ \ 'engineLoad).json.copyFrom(dr("k4")) and
-      (__ \ 'engineRPM).json.copyFrom(dr("kc")) and
-      (__ \ 'throttlePos).json.copyFrom(dr("k11")) and
-      (__ \ 'kpl).json.copyFrom(dr("kff1203")) and
-      (__ \ 'airFuelRatio).json.copyFrom(dr("kff1249")) and
-      (__ \ 'intakeAirTemp).json.copyFrom(dr("kf")) and
-      (__ \ 'intakeManifoldPressure).json.copyFrom(dr("kb")) and
-      (__ \ 'engineCoolantTemp).json.copyFrom(dr("k5")) and
-      (__ \ 'co2InGperKM).json.copyFrom(dr("kff1257")) and
-      (__ \ 'fuelFlowRate).json.copyFrom(dr("kff125d")) and
-      (__ \ 'fuelPressure).json.copyFrom(dr("ka")) and
-      (__ \ 'massAirFlowRate).json.copyFrom(dr("k10")) and
-      (__ \ 'timingAdvance).json.copyFrom(dr("ke")) and
-      (__ \ 'vacuum).json.copyFrom(dr("kff1202")) and
-      (__ \ 'voltage).json.copyFrom(dr("kff1238")) and
-      (__ \ 'barometer).json.copyFrom(dr("kff1270")) and
-      (__ \ 'torque).json.copyFrom(dr("kff1225")) and
-      (__ \ 'airFuelRatioCmd).json.copyFrom(dr("kff124d"))) reduce
-
-    val logToCoreData = (
-      (__ \ 'id).json.copyFrom((__ \ "_id").json.pick[JsString]) and
-      (__ \ 'eml).json.copyFrom((__ \ 'eml).json.pick) and
-      (__ \ 'session).json.copyFrom((__ \ 'session).json.pick) and
-      (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))) reduce
     val q = Json.obj("indexed" -> false)
     //    SessionLogDao.findE(q)
 
@@ -99,23 +122,10 @@ object Torque extends Controller with MongoController with Log {
       Logger.info(s"<-- got ${data.size} to perform index")
 
       data.foreach { js =>
+
         if (!(js \ "profileName").asOpt[JsValue].isDefined) {
 
-          val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
-          val js2 = js.transform(logToCoreData).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
-
-          val id = (js \ "_id" \ "$oid").asOpt[String] getOrElse { (js \ "_id").as[String] }
-
-          val geoPoint1 = (js \ "kff1005").asOpt[String].map(_.toDouble)
-          val geoPoint2 = (js \ "kff1006").asOpt[String].map(_.toDouble)
-
-          var newJs = js1 ++ js2
-
-          if (geoPoint1.isDefined && geoPoint2.isDefined)
-            newJs = newJs ++ Json.obj("geoPoint" -> Json.arr(geoPoint1, geoPoint2))
-
-          (js \ "sessionName").asOpt[String] map { v => newJs = newJs ++ Json.obj("sessionName" -> v) }
-
+          val (id, newJs) = doConvertToElasticSearch(js)
           esClient.index("obddata", "torquelogs", id, newJs)
 
           val q = Json.obj("_id" -> (js \ "_id"))
@@ -145,6 +155,45 @@ object Torque extends Controller with MongoController with Log {
       (__ \ 'session).json.prune andThen
       (__ \ 'eml).json.prune andThen
       removeId
+
+  def uploadRace = Action.async { request =>
+    val flattenMap = request.queryString.map { qMap =>
+      (qMap._1, qMap._2.head)
+    }
+
+    val js = Json.toJson(flattenMap).as[JsObject]
+    log.debug(s"racing js received: $js")
+
+    js.validate(requiredField) match {
+      case s: JsSuccess[JsObject] =>
+        // discard header
+
+        if (js.toString.contains("default") || js.toString.contains("user") || js.toString.contains("profile")) {
+          log.debug(s"skipped this js as it's header content: $js")
+          Future.successful(Ok("OK!"))
+        } else {
+          val eml = (js \ "eml").as[String]
+
+          RaceCar.findByUploadId(eml) flatMap {
+            case Some(rc) =>
+
+              // has data and
+              val genId = BSONObjectID.generate.stringify
+              val (id, newJs) = doConvertToElasticSearch(js)
+              esClient.index("racedata", "torquelogs", genId, newJs) map { a => Ok("OK!") }
+
+            case None =>
+              log.debug(s"not found the uploadId: $eml")
+              Future.successful(BadRequest("ERR!"))
+
+          }
+        }
+      case e: JsError =>
+        Future.successful(BadRequest("Invalid Torque Data"))
+
+    }
+
+  }
 
   /** upload **/
   def upload = Action.async { request =>

@@ -1,2 +1,6 @@
-@* index Template File *@
-@(param: Any)
+@* settings Template File *@
+@()(implicit reqHeader:views.MyRequestHeader)
+
+@base.race {
+	index page
+}

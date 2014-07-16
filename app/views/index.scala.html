@@ -1,7 +1,8 @@
-@(username:String)
+@(username:String)(implicit reqHeader:views.MyRequestHeader)
 
 @main("Home") {
-	<div ng-app="app">
+	@inc.header()
+	<div class="container" ng-app="app">
 	<div ng-controller="MainCtrl">
 	
 	<div class="col-sm-3">

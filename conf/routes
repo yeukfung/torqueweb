@@ -11,6 +11,9 @@ DELETE   /es/*url                      controllers.ElasticSearch.esRedirect(url)
 # Home page
 GET      /                             controllers.Application.index
 
+GET      /gen/start/:raceId            controllers.Race.startGen(raceId)
+GET      /gen/end/:raceId              controllers.Race.stopGen(raceId)
+
 # user
 GET      /user/profile                 controllers.User.profile
 
@@ -26,6 +29,7 @@ POST     /login                        controllers.Application.checkLogin
 
 GET      /logout                       controllers.Application.logout
 
+GET      /upload/race                  controllers.Torque.uploadRace
 GET      /torque                       controllers.Torque.upload
 POST     /torque                       controllers.Torque.upload
 
@@ -44,6 +48,15 @@ POST     /api/users                    controllers.Api.ajaxUserProfileSave(userI
 POST     /api/users/:userId            controllers.Api.ajaxUserProfileSave(userId)
 PUT      /api/users/:userId            controllers.Api.ajaxUserProfileSave(userId)
 DELETE   /api/users/:userId            controllers.Api.ajaxUserProfileDelete(userId)
+
+# api - race car
+GET      /api/racecars                 controllers.Api.ajaxRaceCarGet(id = "")
+GET      /api/racecars/:id             controllers.Api.ajaxRaceCarGet(id)
+POST     /api/racecars                 controllers.Api.ajaxRaceCarSave(id = "")
+POST     /api/racecars/:id             controllers.Api.ajaxRaceCarSave(id)
+PUT      /api/racecars/:id             controllers.Api.ajaxRaceCarSave(id)
+DELETE   /api/racecars/:id             controllers.Api.ajaxRaceCarDelete(id)
+
 
 GET      /torque/pruneData/:apiKey     controllers.Admin.pruneData(apiKey:String)
 

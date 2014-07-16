@@ -11,6 +11,44 @@ import daos.UserProfileDao
 import scala.concurrent.Future
 import play.api.libs.Crypto
 import helpers.Log
+import helpers.MyHelper._
+import models.RaceCar
+import daos.RaceCarDao
+
+trait RaceCarApi extends Log {
+  this: Controller with MySecured =>
+
+  def ajaxRaceCarSave(id: String) = Authenticated().async { request =>
+    request.body.asJson.flatMap {
+      _.asOpt[RaceCar] map { rc =>
+//TODO: user id may be overrided by racecar
+        if (request.isAdmin || rc.eml.contains(request.username)) {
+          RaceCar.saveRaceCar(request.username, rc) map { rcSaved => Ok(Json.toJson(rcSaved)) }
+        } else Future.successful(Unauthorized("unauthorized"))
+
+      }
+    } getOrElse (Future.successful(BadRequest("invalid")))
+  }
+
+  def ajaxRaceCarDelete(id: String) = Authenticated().async { request =>
+    val q = Json.obj("id" -> id)
+    RaceCarDao.findFirstT(q) map {
+      case Some(rc) => if (rc.eml.contains(request.username)) {
+        RaceCarDao.remove(q, firstMatchOnly = true)
+        Ok(q)
+      } else Unauthorized("not the owner")
+      case None => BadRequest("invalid")
+    }
+  }
+
+  private implicit def listToJsArray[T](l: List[T])(implicit fmt: Format[T]): JsArray = l.foldLeft(Json.arr())((acc, item) => acc ++ Json.arr(item))
+  
+  def ajaxRaceCarGet(id: String) = Authenticated().async { request =>
+    val commonq = if(request.isAdmin) Json.obj() else Json.obj("eml" -> request.username) 
+    val q = if (id == "") { commonq } else { Json.obj("id" -> id)  ++ commonq }
+    RaceCarDao.findT(q) map { l => Ok(l: JsArray) }
+  }
+}
 
 trait UserProfileApi extends Log {
   this: Controller with MySecured =>
@@ -49,7 +87,7 @@ trait UserProfileApi extends Log {
     } else Future.successful(Unauthorized("unauthorized"))
   }
 
-  implicit def listToJsArray[T](l: List[T])(implicit fmt: Format[T]): JsArray = l.foldLeft(Json.arr())((acc, item) => acc ++ Json.arr(Json.toJson(item).transform(removePass).get))
+  private implicit def listToJsArray[T](l: List[T])(implicit fmt: Format[T]): JsArray = l.foldLeft(Json.arr())((acc, item) => acc ++ Json.arr(Json.toJson(item).transform(removePass).get))
 
   def ajaxUserProfileGet(userId: String) = Authenticated().async { request =>
     val q = if (userId == "") { Json.obj() } else { Json.obj("id" -> userId) }
@@ -57,7 +95,7 @@ trait UserProfileApi extends Log {
   }
 }
 
-object Api extends Controller with MySecured with UserProfileApi {
+object Api extends Controller with MySecured with UserProfileApi with RaceCarApi {
 
   val removeUsedField = ((__ \ "default").json.prune andThen (__ \ "user").json.prune andThen (__ \ "profile").json.prune)
 

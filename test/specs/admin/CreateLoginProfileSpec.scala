@@ -6,7 +6,7 @@ import models.UserProfile
 import play.api.test._
 import play.api.test.Helpers._
 import play.api.libs.json.Json
-import specs.SessionLogGenerator
+import helpers.SessionLogGenerator
 
 class CreateLoginProfileSpec extends Specification with SpecUtil with SessionLogGenerator {
   override def is = s2"""

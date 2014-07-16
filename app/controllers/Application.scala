@@ -19,7 +19,7 @@ import helpers.Log
 
 object Application extends Controller with MySecured with Log {
 
-  def index = Authenticated() { request =>
+  def index = Authenticated() { implicit request =>
     Ok(views.html.index(request.username))
   }
 

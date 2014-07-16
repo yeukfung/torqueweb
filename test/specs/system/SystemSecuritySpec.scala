@@ -3,13 +3,13 @@ package specs.system
 import org.specs2.mutable.Specification
 import play.api.test.WithApplication
 import specs.SpecUtil
-import specs.SessionLogGenerator
 import play.api.test._
 import play.api.test.Helpers._
 import org.openqa.selenium.htmlunit.HtmlUnitDriver
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.chrome.ChromeDriver
 import models.UserProfile
+import helpers.SessionLogGenerator
 
 class SystemSecuritySpec extends Specification with SpecUtil with SessionLogGenerator {
 
