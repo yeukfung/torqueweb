@@ -1,4 +1,4 @@
-var mod = angular.module("adminapp", ['ngResource','ngMap']);
+var mod = angular.module("adminapp", ['ngResource']);
 
 mod.controller("UserController", ["$scope", "$resource",function($scope, $resource){
   var User = $resource('/api/users/:id', {id:'@id'});

@@ -20,13 +20,14 @@ trait RaceCarApi extends Log {
 
   def ajaxRaceCarSave(id: String) = Authenticated().async { request =>
     request.body.asJson.flatMap {
-      _.asOpt[RaceCar] map { rc =>
-//TODO: user id may be overrided by racecar
-        if (request.isAdmin || rc.eml.contains(request.username)) {
-          RaceCar.saveRaceCar(request.username, rc) map { rcSaved => Ok(Json.toJson(rcSaved)) }
-        } else Future.successful(Unauthorized("unauthorized"))
+      case js: JsObject =>
+        (js ++ Json.obj("eml" -> request.username)).asOpt[RaceCar] map { rc =>
+          //TODO: user id may be overrided by racecar
+          if (request.isAdmin || rc.eml.contains(request.username)) {
+            RaceCar.saveRaceCar(request.username, rc) map { rcSaved => Ok(Json.toJson(rcSaved)) }
+          } else Future.successful(Unauthorized("unauthorized"))
 
-      }
+        }
     } getOrElse (Future.successful(BadRequest("invalid")))
   }
 
@@ -42,10 +43,10 @@ trait RaceCarApi extends Log {
   }
 
   private implicit def listToJsArray[T](l: List[T])(implicit fmt: Format[T]): JsArray = l.foldLeft(Json.arr())((acc, item) => acc ++ Json.arr(item))
-  
+
   def ajaxRaceCarGet(id: String) = Authenticated().async { request =>
-    val commonq = if(request.isAdmin) Json.obj() else Json.obj("eml" -> request.username) 
-    val q = if (id == "") { commonq } else { Json.obj("id" -> id)  ++ commonq }
+    val commonq = if (request.isAdmin) Json.obj() else Json.obj("eml" -> request.username)
+    val q = if (id == "") { commonq } else { Json.obj("id" -> id) ++ commonq }
     RaceCarDao.findT(q) map { l => Ok(l: JsArray) }
   }
 }

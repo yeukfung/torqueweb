@@ -18,7 +18,7 @@ object RaceCar extends Log {
     car.id match {
       case Some(id) =>
         val q = Json.obj("id" -> id)
-        val updatedCar = car.copy(userId = userId)
+        val updatedCar = car.copy(userId = Some(userId))
         log.debug(s"updating car: $updatedCar")
 
         RaceCarDao.updateT(q, updatedCar).map { le => updatedCar }
@@ -26,8 +26,8 @@ object RaceCar extends Log {
       case None =>
         CounterDao.getNextId flatMap { idx =>
 
-          val updatedCar0 = car.copy(idx = idx, userId = userId)
-          val updatedCar = updatedCar0.copy(uploadId = updatedCar0.genUploadId)
+          val updatedCar0 = car.copy(idx = Some(idx), userId = Some(userId))
+          val updatedCar = updatedCar0.copy(uploadId = Some(updatedCar0.genUploadId))
           log.debug(s"inserting car: $updatedCar")
           RaceCarDao.insertT(updatedCar).map { le => updatedCar }
         }
@@ -56,9 +56,9 @@ case class RaceCar(
   carWeight: Option[String] = None,
   drive: Option[String] = None, // ff/fr/4wd/mr
   carClass: Option[String] = None,
-  userId: String = "NA",
-  uploadId: String = "NA", // system field, will be override
-  idx: String = "-1",
+  userId: Option[String] = Some("NA"),
+  uploadId: Option[String] = Some("NA"), // system field, will be override
+  idx: Option[String] = Some("-1"),
   id: Option[String] = None) {
-  def genUploadId = s"${eml}_${idx}"
+  def genUploadId = s"${eml}_${idx.get}"
 }
