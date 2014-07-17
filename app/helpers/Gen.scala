@@ -9,29 +9,55 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits._
 import akka.actor.Cancellable
 import play.api.libs.json.JsValue
+import play.api.libs.ws.WS
+import controllers.Torque
 
-class GenSessionLogActor extends Actor with Log {
+class GenSessionLogActor extends Actor with Log with SessionLogGenerator {
 
-  var cancelMap: Map[String, Cancellable] = Map.empty
+  var cancelMap: Map[String, (Long, Cancellable)] = Map.empty
 
   def receive = {
     case ("gen", raceId: String) =>
+      val HOST = "http://localhost:9000"
+
       log.debug("generate with id: " + raceId)
 
+      cancelMap.get(raceId) match {
+        case Some(x) =>
+          val (sessionId, _) = x
+          val sessionLogParam = genSessionLogQueryString(sessionId, raceId)
+          WS.url(s"$HOST/upload/race?$sessionLogParam").get().map {
+            resp =>
+              log.debug(s"got response from svr: ${resp.body.toString()}")
+          }
+
+          Akka.system.scheduler.scheduleOnce(Duration(1, "second"), self, ("gen", raceId))
+        case None =>
+          log.debug(s"unable to locate raceId: $raceId")
+      }
+
     case ("start", raceId: String) =>
-      val cancelHook = Akka.system.scheduler.schedule(0.microsecond, Duration(1, "second"), self, ("gen", raceId))
+      val cancelHook = Akka.system.scheduler.scheduleOnce(Duration(1, "second"), self, ("gen", raceId))
       if (!cancelMap.get(raceId).isDefined) {
-        cancelMap += (raceId -> cancelHook)
-        log.debug("started")
+        val (sessionId, param) = genHeaderQueryString(raceId)
+        cancelMap += (raceId -> (sessionId, cancelHook))
+        log.debug(s"started with sessionId: $sessionId")
+
+        //cancelHook.cancel()
       }
 
     case ("stop", raceId: String) =>
       if (cancelMap.get(raceId).isDefined) {
-        cancelMap(raceId).cancel()
+        val cancelled = cancelMap(raceId)._2.cancel()
         cancelMap -= raceId
-        log.debug("stopped")
+        log.debug(s"stopped with cancelled flag: $cancelled")
       }
 
+  }
+
+  override def preRestart(ex: Throwable, opt: Option[Any]) {
+    log.error(ex.getMessage())
+    cancelMap.foreach(f => f._2._2.cancel)
   }
 }
 

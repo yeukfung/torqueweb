@@ -46,6 +46,8 @@ object Admin extends Controller with MySecured {
       for {
         deleteOk <- ES.esClient.deleteIndex("obddata")
         createOk <- ES.esClient.createIndex("obddata", Some(jsonSetting))
+        delete1Ok <- ES.esClient.deleteIndex("racedata")
+        create1Ok <- ES.esClient.createIndex("racedata", Some(jsonSetting))
         mappingOk <- ES.esClient.index("obddata", "torquelogs", "_mapping", jsonSetting)
         mapping1Ok <- ES.esClient.index("racedata", "torquelogs", "_mapping", jsonSetting)
         //        cntLog <- SessionLogDao.find(q)

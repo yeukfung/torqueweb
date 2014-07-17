@@ -17,7 +17,7 @@ mod.controller("RaceCarController", ["$scope", "$resource", "$modal", "$log", fu
   
   $scope.editRaceCar = function(racecar) {
     $scope.selectedItem = racecar;
-    $scope.open();
+    $scope.open(false);
   }
 
   $scope.open = function(reset) {

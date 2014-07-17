@@ -27,12 +27,12 @@
     <div class="col-sm-6">
 	      <label class="control-label">make</label> <div> <input class="form-control" type="text" ng-model="item.carMake"> </div>
 	      <label class="control-label">model</label> <div> <input class="form-control" type="text" ng-model="item.carModel"> </div>
-	      <label class="control-label">engine cc</label> <div> <input class="form-control" type="text" ng-model="item.engineCC"> </div>
+	      <label class="control-label">engine(cc)</label> <div> <input class="form-control" type="text" ng-model="item.engineCC"> </div>
 
     </div>
     <div class="col-sm-6">
-	      <label class="control-label">weight</label> <div> <input class="form-control" type="text" ng-model="item.carWeight"> </div>
-	      <label class="control-label">class</label> <div> <input class="form-control" type="text" ng-model="item.carClass"> </div>
+	      <label class="control-label">weight(kg)</label> <div> <input class="form-control" type="text" ng-model="item.carWeight"> </div>
+	      <label class="control-label">class(sport/sedan/race)</label> <div> <input class="form-control" type="text" ng-model="item.carClass"> </div>
 	      <label class="control-label">drive</label> <div> <select class="form-control" ng-model="item.drive" ng-options="drive for drive in drives" ></select> </div>
     </div>
 
@@ -52,11 +52,10 @@
 	    <hr/>
 	    <dl>
 	      <dt>uploadId</dt><dd>{{racecar.uploadId}}</dd>
-	      <dt>index</dt><dd>{{racecar.idx}}</dd>
 	      <dt>make</dt> <dd>{{racecar.carMake}}</dd>
 	      <dt>model</dt> <dd>{{racecar.carModel}}</dd>
-	      <dt>engine cc</dt> <dd>{{racecar.engineCC}}</dd>
-	      <dt>weight</dt> <dd>{{racecar.carWeight}}</dd>
+	      <dt>engine(cc)</dt> <dd>{{racecar.engineCC}}</dd>
+	      <dt>weight(kg)</dt> <dd>{{racecar.carWeight}}</dd>
 	      <dt>class</dt> <dd>{{racecar.carClass}}</dd>
 	      <dt>drive</dt> <dd>{{racecar.drive}}</dd>
 	      <dt>last uploaded</dt><dd></dd>
@@ -68,7 +67,7 @@
 	<div class="clear"></div>
 	<div class="col-sm-12">
 	<hr/>
-	<a class="text-center btn btn-success">Realtime Info</a>
+	<a href="/assets/analytics/index.html#/dashboard/file/racing.json^" class="text-center btn btn-success">Realtime Info</a>
 	<br/><br/><br/><br/>
 	</div>
 	

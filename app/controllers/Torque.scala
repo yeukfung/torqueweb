@@ -85,15 +85,17 @@ object Torque extends Controller with MongoController with Log {
     (__ \ 'torque).json.copyFrom(dr("kff1225")) and
     (__ \ 'airFuelRatioCmd).json.copyFrom(dr("kff124d"))) reduce
 
+    val TZ8HR = (8 * 1000 * 60 * 60)
   val logToCoreData = (
-    (__ \ 'id).json.copyFrom((__ \ "_id").json.pick[JsString]) and
+    (__ \ 'id).json.copyFrom((__ \ "_id").json.pick[JsString] or (__ \ "time").json.pick[JsString]) and
     (__ \ 'eml).json.copyFrom((__ \ 'eml).json.pick) and
     (__ \ 'session).json.copyFrom((__ \ 'session).json.pick) and
-    (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong)))))) reduce
+    (__ \ "@timestamp").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong - TZ8HR))))) and
+    (__ \ "utctime").json.copyFrom(((__ \ 'time).read[String]).map(s => JsString(dateFormat.format(new Date(s.toLong - TZ8HR)))))) reduce
 
   private def doConvertToElasticSearch(js: JsObject): (String, JsObject) = {
-    val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
-    val js2 = js.transform(logToCoreData).fold(invalid = { err => println(err + " js: " + js); Json.obj() }, valid = { js => js })
+    val js1 = js.transform(logToOBDDataJs).fold(invalid = { err => println("logToOBDDataJs err: " + err + " js: " + js); Json.obj() }, valid = { js => js })
+    val js2 = js.transform(logToCoreData).fold(invalid = { err => println("logToCoreData err: " + err + " js: " + js); Json.obj() }, valid = { js => js })
 
     val idRead = ((__ \ "_id" \ "$oid").read[String] or (__ \ "_id").read[String] or (__ \ "id").read[String])
 

@@ -13,6 +13,7 @@ GET      /                             controllers.Application.index
 
 GET      /gen/start/:raceId            controllers.Race.startGen(raceId)
 GET      /gen/end/:raceId              controllers.Race.stopGen(raceId)
+GET      /gen/stop/:raceId              controllers.Race.stopGen(raceId)
 
 # user
 GET      /user/profile                 controllers.User.profile
