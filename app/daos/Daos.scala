@@ -22,6 +22,7 @@ import scala.concurrent.duration.Duration
 import helpers.Log
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.iteratee.Enumerator
+import helpers.java.TorqueFreeUtil
 
 trait BaseDao extends Controller with MongoController with Log {
 
@@ -47,20 +48,22 @@ trait BaseDao extends Controller with MongoController with Log {
   val hasId = (__ \ "_id").read[JsValue] or (__ \ "id").read[JsValue]
   val removeMongoId = (__ \ "_id").json.prune
 
+  def onSave(js: JsObject) = js
+
   def insert(obj: JsObject) = {
     val bsonid = BSONObjectID.generate.stringify
     (obj.transform(hasId)).asOpt match {
       case None =>
         val objToSave = obj ++ Json.obj("_id" -> bsonid) ++ Json.obj("id" -> bsonid)
-        coll.insert(objToSave) map { x => objToSave }
+        coll.insert(onSave(objToSave)) map { x => objToSave }
 
       case Some(jsid) =>
-        this.update(Json.obj("_id" -> jsid), obj, multi = false) map { x => obj }
+        this.update(Json.obj("_id" -> jsid), onSave(obj), multi = false) map { x => obj }
     }
   }
 
   def update(q: JsObject, upd: JsObject, multi: Boolean = false) = {
-    val js = Json.obj("$set" -> upd.transform(removeMongoId).get)
+    val js = Json.obj("$set" -> onSave(upd.transform(removeMongoId).get))
     log.debug(s"BaseDao.update: js = $js and q = $q")
     coll.update(q, js, multi = multi)
   }
@@ -69,10 +72,10 @@ trait BaseDao extends Controller with MongoController with Log {
 }
 
 trait BaseTypedDao[T] extends BaseDao {
-  def insertT(obj: T)(implicit fmt: Format[T]) = this.insert(Json.toJson(obj).as[JsObject])
+  def insertT(obj: T)(implicit fmt: Format[T]) = this.insert(onSave(Json.toJson(obj).as[JsObject]))
 
   def updateT(q: JsObject, upd: T, multi: Boolean = false)(implicit fmt: Format[T]) = {
-    val js = Json.obj("$set" -> fmt.writes(upd))
+    val js = Json.obj("$set" -> onSave(fmt.writes(upd).as[JsObject]))
     coll.update(q, js, multi = multi)
   }
 
@@ -95,6 +98,17 @@ object SessionLogDao extends BaseDao { val dbName = "sessionlogs" }
 object UserProfileDao extends BaseTypedDao[UserProfile] {
   val dbName = "userprofiles"
 
+  override def onSave(js: JsObject) = {
+    log.debug("onSave original: " + js)
+    (js \ "deviceId").asOpt[String] match {
+      case Some(deviceId) =>
+        val encodedDeviceId = TorqueFreeUtil.encode(deviceId)
+        val toSave = js ++ Json.obj("deviceIdEncoded" -> encodedDeviceId)
+        log.debug("onSave override for UserProfile: " + toSave)
+        toSave
+      case None => js
+    }
+  }
 }
 
 object RaceDao extends BaseTypedDao[Race] {

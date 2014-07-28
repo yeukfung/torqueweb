@@ -23,6 +23,11 @@ object UserProfile {
     dao.findFirstT(q)
   }
 
+  def getProfileByDeviceId(encodedDeviceId: String): Future[Option[UserProfile]] = {
+    val q = Json.obj("deviceIdEncoded" -> encodedDeviceId)
+    dao.findFirstT(q)
+  }
+
   def getByLoginData(eml: String, signedPass: String): Future[Option[UserProfile]] = {
     val q = Json.obj("eml" -> eml, "passwordHash" -> signedPass)
     dao.findFirstT(q)
@@ -38,6 +43,8 @@ case class UserProfile(
   passwordHash: String,
   name: String,
   role: String = UserProfile.ROLE_normal, // normal, admin, race
+  deviceId: Option[String] = None,
+  deviceIdEncoded: Option[String] = None,
   disabled: Option[Boolean] = Some(false),
   id: Option[String] = None)
 

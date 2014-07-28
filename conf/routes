@@ -13,7 +13,7 @@ GET      /                             controllers.Application.index
 
 GET      /gen/start/:raceId            controllers.Race.startGen(raceId)
 GET      /gen/end/:raceId              controllers.Race.stopGen(raceId)
-GET      /gen/stop/:raceId              controllers.Race.stopGen(raceId)
+GET      /gen/stop/:raceId             controllers.Race.stopGen(raceId)
 
 # user
 GET      /user/profile                 controllers.User.profile
@@ -31,8 +31,11 @@ POST     /login                        controllers.Application.checkLogin
 GET      /logout                       controllers.Application.logout
 
 GET      /upload/race                  controllers.Torque.uploadRace
+GET      /torque/free                  controllers.Torque.uploadFree
+
 GET      /torque                       controllers.Torque.upload
 POST     /torque                       controllers.Torque.upload
+
 
 # api
 GET      /api/sessions                 controllers.Api.ajaxSessionsGet

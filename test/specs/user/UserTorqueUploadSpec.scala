@@ -10,6 +10,11 @@ import daos.SessionHeaderDao
 import play.api.libs.json.Json
 import scala.concurrent.Await
 import daos.SessionLogDao
+import models.UserProfile
+import daos.UserProfileDao
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits._
+import helpers.java.TorqueFreeUtil
 
 class UserTorqueUploadSpec extends Specification with SpecUtil {
 
@@ -37,6 +42,11 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
   When: server submit the index to elastic search
   Then: session log is become indexed							$e3
   
+  Given: torque free version is using
+  When: user try to upload torque free version, which is missing eml field
+  Then: system will discard the upload if user is not bind the device id
+  When: user bind the device ID to user profile
+  Then: system is able to upload the data generated from torque free  $e4
   """
 
   def init() {
@@ -75,7 +85,7 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
     val result1 = route(FakeRequest(GET, s"/torque?$qstr1")).get
     status(result1) must_== OK
     contentAsString(result1) must_== "OK!"
-      
+
     val list = Await.result(SessionHeaderDao.find(Json.obj()), dur)
     list.size must_== 1
 
@@ -127,22 +137,69 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
     status(result) must_== OK
     contentAsString(result) must_== "OK!"
 
-      
     val list = Await.result(SessionLogDao.find(Json.obj()), dur)
     list.size must_== 1
-      
-    
+
     (list.head \ "indexed").as[Boolean] must_== false
-    
+
     val es = route(FakeRequest(GET, "/torque/sendToES")).get
     status(es) must_== OK
     contentAsString(es) must_== "done"
-      
+
     val listAfter = Await.result(SessionLogDao.find(Json.obj()), dur)
     listAfter.size must_== 1
-    
+
     (listAfter.head \ "indexed").as[Boolean] must_== true
-    
+
+  }
+
+  def initTorqueFree() {
+    cleanDB
+    adminUtil.createUser("yeukfung@gmail.com")
+  }
+
+  def e4 = new WithApplication {
+    initTorqueFree()
+    val DEVICEID = "87658765"
+    val params = Map(
+      "v" -> 3,
+      "id" -> TorqueFreeUtil.encode(DEVICEID),
+      "time" -> 1402969539483L,
+      "session" -> 1402969511745L,
+      "k11" -> 16.470589,
+      "kff125d" -> 2.4863095,
+      "kff1222" -> -0.7247865)
+
+    val qstr = mapToQueryString(params)
+    val result = route(FakeRequest(GET, s"/torque/free?$qstr")).get
+    status(result) must_== OK
+    contentAsString(result) must_== "OK!"
+
+    val list = Await.result(SessionLogDao.find(Json.obj()), dur)
+    list.size must_== 0
+
+    val updateUserOk = Await.result(UserProfile.getProfileByEmail("yeukfung@gmail.com") flatMap {
+      case Some(profile) =>
+        println("profile is: " + profile)
+        UserProfileDao.updateT(Json.obj("id" -> profile.id.get), profile.copy(deviceId = Some(DEVICEID))) flatMap { le =>
+          UserProfile.getProfileByEmail("yeukfung@gmail.com") map {
+            p => p.isDefined && p.get.deviceId.get == DEVICEID && p.get.deviceIdEncoded.get == TorqueFreeUtil.encode(DEVICEID)
+          }
+        }
+      case None => Future.successful(false)
+    }, dur)
+
+    updateUserOk must beTrue
+
+    val result1 = route(FakeRequest(GET, s"/torque/free?$qstr")).get
+    status(result1) must_== OK
+    contentAsString(result1) must_== "OK!"
+
+    val list1 = Await.result(SessionLogDao.find(Json.obj()), dur)
+    list1.size must_== 1
+
+    (list1.head \ "indexed").as[Boolean] must_== false
+
   }
 
 }

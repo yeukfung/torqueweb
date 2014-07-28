@@ -85,7 +85,7 @@ object Torque extends Controller with MongoController with Log {
     (__ \ 'torque).json.copyFrom(dr("kff1225")) and
     (__ \ 'airFuelRatioCmd).json.copyFrom(dr("kff124d"))) reduce
 
-    val TZ8HR = (8 * 1000 * 60 * 60)
+  val TZ8HR = (8 * 1000 * 60 * 60)
   val logToCoreData = (
     (__ \ 'id).json.copyFrom((__ \ "_id").json.pick[JsString] or (__ \ "time").json.pick[JsString]) and
     (__ \ 'eml).json.copyFrom((__ \ 'eml).json.pick) and
@@ -197,16 +197,7 @@ object Torque extends Controller with MongoController with Log {
 
   }
 
-  /** upload **/
-  def upload = Action.async { request =>
-
-    val flattenMap = request.queryString.map { qMap =>
-      (qMap._1, qMap._2.head)
-    }
-
-    val js = Json.toJson(flattenMap).as[JsObject]
-    log.debug(s"js received: $js")
-
+  private def processJs(js: JsObject) = {
     js.validate(requiredField) match {
       case s: JsSuccess[JsObject] =>
         val eml = (js \ "eml").as[String]
@@ -258,9 +249,38 @@ object Torque extends Controller with MongoController with Log {
       case e: JsError =>
         Future.successful(BadRequest("ERR!"))
     }
+  }
+  /** upload **/
+  def upload = Action.async { request =>
+
+    val flattenMap = request.queryString.map { qMap =>
+      (qMap._1, qMap._2.head)
+    }
+
+    val js = Json.toJson(flattenMap).as[JsObject]
+//    log.debug(s"js received: $js")
+
+    processJs(js)
 
     //println("-->")
 
+  }
+
+  def uploadFree = Action.async {
+    request =>
+      val flattenMap = request.queryString.map { qMap =>
+        (qMap._1, qMap._2.head)
+      }
+      val js = Json.toJson(flattenMap).as[JsObject]
+      val deviceId = (js \ "id").as[String]
+      UserProfile.getProfileByDeviceId(deviceId) flatMap {
+        case Some(profile) =>
+          log.debug(s"re-mapping the encoded device id $deviceId for user email ${profile.eml} ")
+          processJs(js ++ Json.obj("eml" -> profile.eml))
+        case None =>
+          log.debug("unknown free torque data is submitted from encoded device id: " + deviceId)
+          Future.successful(Ok("OK!"))
+      }
   }
 
 }
