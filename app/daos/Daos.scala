@@ -95,8 +95,8 @@ object SessionHeaderDao extends BaseDao { val dbName = "sessionheaders" }
 
 object SessionLogDao extends BaseDao { val dbName = "sessionlogs" }
 
-object UserProfileDao extends BaseTypedDao[UserProfile] {
-  val dbName = "userprofiles"
+trait deviceIdLogic {
+  this: BaseDao =>
 
   override def onSave(js: JsObject) = {
     log.debug("onSave original: " + js)
@@ -109,9 +109,14 @@ object UserProfileDao extends BaseTypedDao[UserProfile] {
       case None => js
     }
   }
+
 }
 
-object RaceDao extends BaseTypedDao[Race] {
+object UserProfileDao extends BaseTypedDao[UserProfile] with deviceIdLogic {
+  val dbName = "userprofiles"
+}
+
+object RaceDao extends BaseTypedDao[Race] with deviceIdLogic {
   val dbName = "races"
 }
 

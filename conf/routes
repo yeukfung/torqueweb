@@ -31,7 +31,7 @@ POST     /login                        controllers.Application.checkLogin
 GET      /logout                       controllers.Application.logout
 
 GET      /upload/race                  controllers.Torque.uploadRace
-GET      /torque/free                  controllers.Torque.uploadFree
+#GET      /torque/free                  controllers.Torque.uploadFree
 
 GET      /torque                       controllers.Torque.upload
 POST     /torque                       controllers.Torque.upload

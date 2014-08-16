@@ -14,6 +14,7 @@
     <th>email</th>
     <th>password</th>
     <th>name</th>
+    <th>torque ID</th>
     <th>role</th>
     <th>action</th>
     </tr></thead>
@@ -22,6 +23,7 @@
     <td><span ng-show="!user.$editing">{{user.eml}}</span><input ng-show="user.$editing" type="email" ng-model="user.eml"/></td>
     <td><input ng-show="user.$editing" type="password" name="pass" ng-model="user.pass"/></td>
     <td><span ng-show="!user.$editing">{{user.name}}</span><input ng-show="user.$editing" type="text" ng-model="user.name"/></td>
+    <td><span ng-show="!user.$editing">{{user.deviceId}}</span><input ng-show="user.$editing" type="text" ng-model="user.deviceId"/></td>
     <td><span ng-show="!user.$editing">{{user.role}}</span><select ng-show="user.$editing" ng-model="user.role" ng-options="role for role in roles"/></td>
     <td>
     <a ng-show="!user.$editing" href="" class="btn btn-sm btn-default" ng-click="user.$editing = true">edit</a> 
@@ -49,6 +51,10 @@
 	  <div class="form-group">
   		  <label for="name">Name</label>
     	  <input type="text" class="form-control" id="name" placeholder="Enter name" name="name" ng-model="cf.name" required>
+      </div>
+	  <div class="form-group">
+  		  <label for="name">Torque Device ID</label>
+    	  <input type="text" class="form-control" id="deviceId" placeholder="Enter DeviceID" name="deviceId" ng-model="cf.deviceId" required>
       </div>
       <div class="form-group">
         <label for="role">Role</label>

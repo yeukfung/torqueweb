@@ -1,3 +1,8 @@
+pending
+- timestamp in the real time analysic race is wrong
+- should show how many records in each section name via elasticsearch
+
+
 bugs:
 v - make the site ipad friendly 
 v - make the time show in correct timezone

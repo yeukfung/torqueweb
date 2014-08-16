@@ -59,6 +59,8 @@ case class RaceCar(
   userId: Option[String] = Some("NA"),
   uploadId: Option[String] = Some("NA"), // system field, will be override
   idx: Option[String] = Some("-1"),
+  deviceId: Option[String] = None,
+  deviceIdEncoded: Option[String] = None,
   id: Option[String] = None) {
   def genUploadId = s"${eml}_${idx.get}"
 }

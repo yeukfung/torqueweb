@@ -24,6 +24,8 @@ import models.ES
 import helpers.Log
 import models.RaceCar
 import reactivemongo.bson.BSONObjectID
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 object Torque extends Controller with MongoController with Log {
 
@@ -110,7 +112,7 @@ object Torque extends Controller with MongoController with Log {
       newJs = newJs ++ Json.obj("geoPoint" -> Json.arr(geoPoint1, geoPoint2))
 
     (js \ "sessionName").asOpt[String] map { v => newJs = newJs ++ Json.obj("sessionName" -> v) }
-    (id, newJs)
+    (id, performAnalysis(newJs))
   }
 
   def submitToElasticSearch = Action.async {
@@ -166,7 +168,17 @@ object Torque extends Controller with MongoController with Log {
     val js = Json.toJson(flattenMap).as[JsObject]
     log.debug(s"racing js received: $js")
 
-    js.validate(requiredField) match {
+    val newJs = if ((js \ "eml").asOpt[String].isDefined) {
+      js
+    } else {
+      val deviceId = (js \ "id").as[String]
+      Await.result(UserProfile.getProfileByDeviceId(deviceId) map {
+        case Some(p) => js ++ Json.obj("eml" -> p.eml)
+        case None => js
+      }, Duration(2, "seconds"))
+    }
+
+    newJs.validate(requiredField) match {
       case s: JsSuccess[JsObject] =>
         // discard header
 
@@ -258,29 +270,57 @@ object Torque extends Controller with MongoController with Log {
     }
 
     val js = Json.toJson(flattenMap).as[JsObject]
-//    log.debug(s"js received: $js")
+    //    log.debug(s"js received: $js")
 
-    processJs(js)
+    val newJs = if ((js \ "eml").asOpt[String].isDefined) {
+      js
+    } else {
+      val deviceId = (js \ "id").as[String]
+      Await.result(UserProfile.getProfileByDeviceId(deviceId) map {
+        case Some(p) =>
+          log.debug("uploading using torque free and found ID")
+          js ++ Json.obj("eml" -> p.eml)
+        case None =>
+          log.debug("uploading using torque free and UNABLE to find the deviceId in user profile")
+          js
+
+      }, Duration(2, "seconds"))
+    }
+
+    processJs(newJs)
 
     //println("-->")
 
   }
 
-  def uploadFree = Action.async {
-    request =>
-      val flattenMap = request.queryString.map { qMap =>
-        (qMap._1, qMap._2.head)
-      }
-      val js = Json.toJson(flattenMap).as[JsObject]
-      val deviceId = (js \ "id").as[String]
-      UserProfile.getProfileByDeviceId(deviceId) flatMap {
-        case Some(profile) =>
-          log.debug(s"re-mapping the encoded device id $deviceId for user email ${profile.eml} ")
-          processJs(js ++ Json.obj("eml" -> profile.eml))
-        case None =>
-          log.debug("unknown free torque data is submitted from encoded device id: " + deviceId)
-          Future.successful(Ok("OK!"))
-      }
+  //  def uploadFree = Action.async {
+  //    request =>
+  //      val flattenMap = request.queryString.map { qMap =>
+  //        (qMap._1, qMap._2.head)
+  //      }
+  //      val js = Json.toJson(flattenMap).as[JsObject]
+  //      val deviceId = (js \ "id").as[String]
+  //      UserProfile.getProfileByDeviceId(deviceId) flatMap {
+  //        case Some(profile) =>
+  //          log.debug(s"re-mapping the encoded device id $deviceId for user email ${profile.eml} ")
+  //          processJs(js ++ Json.obj("eml" -> profile.eml))
+  //        case None =>
+  //          log.debug("unknown free torque data is submitted from encoded device id: " + deviceId)
+  //          Future.successful(Ok("OK!"))
+  //      }
+  //  }
+
+  def performAnalysis(js: JsObject): JsObject = {
+    var jsObj = js
+    val speedTag = (js \ "speed").asOpt[Int] match {
+      case Some(s) if s == 0 => Json.obj("tag_speed" -> "STOP")
+      case Some(s) if s > 0 && s <= 40 => Json.obj("tag_speed" -> "SLOW")
+      case Some(s) if s > 40 && s <= 70 => Json.obj("tag_speed" -> "MID")
+      case Some(s) if s > 70 => Json.obj("tag_speed" -> "HIGH")
+      case None => Json.obj()
+    }
+
+    jsObj ++ speedTag
   }
 
 }

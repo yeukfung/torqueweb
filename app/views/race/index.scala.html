@@ -20,6 +20,12 @@
       <input type="text" class="form-control" ng-model="item.name" required>
     </div>
   </div>
+  <div class="form-group">
+    <label class="col-sm-2 control-label">Torque Device Id*</label>
+    <div class="col-sm-10">
+      <input type="text" class="form-control" ng-model="item.deviceId" required>
+    </div>
+  </div>
 
   <div class="form-group">
     <h4 class="text-center">Car Meta Data</h4>
@@ -52,6 +58,7 @@
 	    <hr/>
 	    <dl>
 	      <dt>uploadId</dt><dd>{{racecar.uploadId}}</dd>
+	      <dt>deviceId</dt><dd>{{racecar.deviceId}}</dd>
 	      <dt>make</dt> <dd>{{racecar.carMake}}</dd>
 	      <dt>model</dt> <dd>{{racecar.carModel}}</dd>
 	      <dt>engine(cc)</dt> <dd>{{racecar.engineCC}}</dd>
