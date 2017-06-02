@@ -29,6 +29,83 @@ import scala.concurrent.duration.Duration
 
 object Torque extends Controller with MongoController with Log {
 
+/**
+47  Absolute Throttle Position B(%)
+ff1223  Acceleration Sensor(Total)(g)
+ff1220  Acceleration Sensor(X axis)(g)
+ff1221  Acceleration Sensor(Y axis)(g)
+ff1222  Acceleration Sensor(Z axis)(g)
+49  Accelerator PedalPosition D(%)
+4a  Accelerator PedalPosition E(%)
+ff124d  Air Fuel Ratio(Commanded)(:1)
+221564  AirCon High Side Pressure(bar)
+46  Ambient air temp(Â°F)
+ff1263  Average trip speed(whilst moving only)(km/h)
+ff1272  Average trip speed(whilst stopped or moving)(km/h)
+33  Barometric pressure (from vehicle)(kpa)
+3c  Catalyst Temperature (Bank 1 Sensor 1)(Â°F)
+44  Commanded Equivalence Ratio(lambda)
+ff1258  CO2‚ in g/km (Average)(g/km)
+ff1257  CO2‚ in g/km (Instantaneous)(g/km)
+ff126a  Distance to empty (Estimated)(km)
+31  Distance travelled since codes cleared(km)
+5 Engine Coolant Temperature(Â°F)
+ff1273  Engine kW (At the wheels)(kW)
+4 Engine Load(%)
+43  Engine Load(Absolute)(%)
+0c  Engine RPM(rpm)
+32  Evap System Vapour Pressure(Pa)
+ff125c  Fuel cost (trip)(cost)
+2f  Fuel Level (From Engine ECU)(%)
+0a  Fuel pressure(kpa)
+ff126b  Fuel Remaining (Calculated from vehicle profile)(%)
+7 Fuel Trim Bank 1 Long Term(%)
+14  Fuel trim bank 1 sensor 1(%)
+6 Fuel Trim Bank 1 Short Term(%)
+ff1271  Fuel used (trip)(l)
+ff1239  GPS Accuracy(m)
+ff1010  GPS Altitude(m)
+ff123b  GPS Bearing(Â°)
+ff1006  GPS Latitude(Â°)
+ff1005  GPS Longitude(Â°)
+ff123a  GPS Satellites
+ff1237  GPS vs OBD Speed difference(km/h)
+221145  H2OS Sensor(mV)
+ff1226  Horsepower (At the wheels)(hp)
+221141  Ignition 1 Voltage(V)
+221538  Inlet air temp2 (IAT2)(Â°F)
+0f  Intake Air Temperature(Â°F)
+0b  Intake Manifold Pressure(kpa)
+ff1203  Kilometers Per Litre(Instant)(kpl)
+ff5202  Kilometers Per Litre(Long Term Average)(kpl)
+2211a6  Knock Retard(Deg.)
+ff1207  Litres Per 100 Kilometer(Instant)(l/100km)
+ff5203  Litres Per 100 Kilometer(Long Term Average)(l/100km)
+10  Mass Air Flow Rate(g/s)
+ff1201  Miles Per Gallon(Instant)(mpg)
+ff5201  Miles Per Gallon(Long Term Average)(mpg)
+ff1214  O2 Volts Bank 1 sensor 1(V)
+ff1215  O2 Volts Bank 1 sensor 2(V)
+221154  Oil Temperature (Engine)(Â°F)
+221161  Outside air temperature(Â°F)
+45  Relative Throttle Position(%)
+1f  Run time since engine start(s)
+ff1001  Speed (GPS)(km/h)
+0d  Speed (OBD)(km/h)
+11  Throttle Position(Manifold)(%)
+0e  Timing Advance(Â°)
+ff1225  Torque(ft-lb)
+221940  Transmission Fluid Temp (GM Method 1)(Â°F)
+221940  Transmission Fluid Temp (GM Method 2)(Â°F)
+ff120c  Trip distance (stored in vehicle profile)(km)
+ff1266  Trip Time(Since journey start)(s)
+ff1268  Trip time(whilst moving)(s)
+ff1267  Trip time(whilst stationary)(s)
+ff1202  Turbo Boost & Vacuum Gauge(bar)
+42  Voltage (Control Module)(V)
+ff1238  Voltage (OBD Adapter)(V)
+ff1269  Volumetric Efficiency (Calculated)(%)
+**/
   val pruneId = (__ \ "_id").json.prune
   //val updateKdToNumber = (__ \ "kd").json.update(__.read[JsObject].map { s => println(s); s })
 
@@ -221,6 +298,16 @@ object Torque extends Controller with MongoController with Log {
 
             log.debug(s"data to persist: $data")
 
+            // special handle for the torque free version
+            if ((js \ "source").asOpt[String].isDefined && (js \ "source").as[String] == "torquefree") {
+              // add header if not found
+              SessionHeaderDao.find(s.get.transform(removeTime andThen removeId).get).map { l =>
+                if (l.size == 0) {
+                  SessionHeaderDao.insert(s.get.transform(removeId).get)
+                }
+              }
+            }
+
             if (data.toString.contains("default") || data.toString.contains("user") || data.toString.contains("profile")) {
               // header item
 
@@ -278,12 +365,11 @@ object Torque extends Controller with MongoController with Log {
       val deviceId = (js \ "id").as[String]
       Await.result(UserProfile.getProfileByDeviceId(deviceId) map {
         case Some(p) =>
-          log.debug("uploading using torque free and found ID")
-          js ++ Json.obj("eml" -> p.eml)
+          log.debug(s"uploading using torque free and found ID $deviceId")
+          js ++ Json.obj("eml" -> p.eml, "source" -> "torquefree")
         case None =>
-          log.debug("uploading using torque free and UNABLE to find the deviceId in user profile")
+          log.debug(s"uploading using torque free and UNABLE to find the deviceId in user profile: $deviceId")
           js
-
       }, Duration(2, "seconds"))
     }
 

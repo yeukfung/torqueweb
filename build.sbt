@@ -4,6 +4,8 @@ version := "1.0-SNAPSHOT"
 
 resolvers += "mandubian maven bintray" at "http://dl.bintray.com/mandubian/maven"
 
+resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+
 libraryDependencies ++= Seq(
   jdbc,
   anorm,

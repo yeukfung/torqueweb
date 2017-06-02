@@ -171,9 +171,9 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
       "kff1222" -> -0.7247865)
 
     val qstr = mapToQueryString(params)
-    val result = route(FakeRequest(GET, s"/torque/free?$qstr")).get
-    status(result) must_== OK
-    contentAsString(result) must_== "OK!"
+    val result = route(FakeRequest(GET, s"/torque?$qstr")).get
+    status(result) must_== 400
+    //contentAsString(result) must_== "OK!"
 
     val list = Await.result(SessionLogDao.find(Json.obj()), dur)
     list.size must_== 0
@@ -191,7 +191,7 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
 
     updateUserOk must beTrue
 
-    val result1 = route(FakeRequest(GET, s"/torque/free?$qstr")).get
+    val result1 = route(FakeRequest(GET, s"/torque?$qstr")).get
     status(result1) must_== OK
     contentAsString(result1) must_== "OK!"
 
@@ -200,6 +200,10 @@ class UserTorqueUploadSpec extends Specification with SpecUtil {
 
     (list1.head \ "indexed").as[Boolean] must_== false
 
+    
+    val listHeader = Await.result(SessionHeaderDao.find(Json.obj()), dur)
+    listHeader.size must_== 1
+    
   }
 
 }
